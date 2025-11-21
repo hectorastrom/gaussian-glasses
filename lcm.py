@@ -18,7 +18,10 @@ pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 prompt = "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k"
 generator = torch.manual_seed(0)
 image = pipe(
-    prompt=prompt, num_inference_steps=4, generator=generator, guidance_scale=8.0
+    prompt=prompt, 
+    num_inference_steps=4, 
+    generator=generator, 
+    guidance_scale=8.0
 ).images[0]
 
-image.save("output_lcm.png")
+image.save("outputs/output_lcm.png")

@@ -12,5 +12,5 @@ print(f"Beginning generation of {prompt}")
 start = time()
 image = pipe(prompt).images[0]  
 end = time()
-image.save("output_text2img.png")
+image.save("outputs/output_text2img.png")
 print(f"Image saved in {end-start:.2f}s!")

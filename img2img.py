@@ -12,7 +12,7 @@ pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
     torch_dtype=torch.float16
 ).to(device)
 
-input_image_path = "output_text2img.png"
+input_image_path = "outputs/output_text2img.png"
 init_image = load_image(input_image_path).convert("RGB")
 
 init_image = init_image.resize((512, 512))
@@ -34,4 +34,4 @@ image = pipe(
     guidance_scale=7.5 # how strongly to follow text prompt
 ).images[0]
 
-image.save("output_img2img.png")
+image.save("outputs/output_img2img.png")

@@ -1,0 +1,1 @@
+Get datasets from s3://hectorastrom-dl-final/datasets/COD10k-v3.zip

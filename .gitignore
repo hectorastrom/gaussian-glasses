@@ -5,6 +5,9 @@ build/
 dist/
 wheels/
 *.egg-info
+datasets/*
+!datasets/README.md
+outputs/*
 
 # Virtual environments
 .venv
