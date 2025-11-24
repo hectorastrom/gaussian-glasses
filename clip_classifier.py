@@ -6,9 +6,9 @@ import os
 from PIL import Image
 from datasets import Dataset, DatasetDict, Features, Image as ImageFeature, ClassLabel, Value
 import torch as t
-from torch.utils.data import DataLoader
-from torchvision import transforms
 from transformers import pipeline
+from transformers.pipelines.pt_utils import KeyDataset
+from tqdm import tqdm
 
 ##################################
 # Dataset loading
@@ -130,38 +130,56 @@ if __name__ == "__main__":
 
     class_features = hf_dataset['train'].features['label'] # ClassLabel mapper
     candidate_labels = [f"An image of {label}" for label in class_features.names]
-    BATCH_SIZE = 16
-    top_n = 1 # mark prediction within top_n of real label as correct
+    max_n = 5 # evaluate top_n accuracy for 1...max_n
 
-    total = 0
-    correct = 0
+    for cur_set in ('train', 'test'): # evaluate each top_n, for both test and train
+        print(f"Evaluating accuracy on {cur_set}...")
+        total = 0
+        correct = [0] * max_n
+        correct_confidence = [0] * max_n
 
-    print(f"Beginning evaluation of {len(hf_dataset['train'])} images...")
-    for i in range(0, len(hf_dataset["train"]), BATCH_SIZE):
-        batch_raw = hf_dataset["train"][i : i + BATCH_SIZE]
-        images = batch_raw['image'] # list of PIL images
-        labels = batch_raw['label'] # list of int labels
-        str_labels = class_features.int2str(labels) # list of str
-        total += len(images)
+        # Iterate the pipeline directly:
+        # passing KeyDataset allows the pipeline to pre-fetch the next batch
+        # while the GPU processes the current one.
+        dataset_iterator = clip(
+            KeyDataset(hf_dataset[cur_set], "image"), 
+            candidate_labels=candidate_labels,
+        )
 
-        # handles batching internally
-        result = clip(images, candidate_labels) # B x C list of list of dicts
+        # We must zip with the dataset to get the ground truth labels,
+        # as the pipeline output only contains predictions.
+        for output, example in tqdm(zip(dataset_iterator, hf_dataset[cur_set]), total=len(hf_dataset[cur_set])):
 
-        # evaluate accuracy
-        for i, scores in enumerate(result):
-            for candidate in scores[:top_n]:
-                label_prediction = candidate['label'].split(' ')[-1]
-                actual = str_labels[i]
-                # print(f"One of our predictions: {label_prediction}")
-                # print(f"actual label: {actual}")
-                # print()
-                if label_prediction == actual:
-                    correct += 1
-                break
+            # Extract ground truth
+            label_int = example['label']
+            actual_label_str = class_features.int2str(label_int)
 
-    print(f"Correct: {correct}")
-    print(f"Top_{top_n} accuracy: {correct / total}")
-    
-    # RESULT:
-    # Correct: 1757
-    # Top_1 accuracy: 0.29283333333333333
+            total += 1
+            found_at_index = -1
+            found_score = 0.0
+
+            # Check predictions (output is a list of dicts sorted by score)
+            for n, candidate in enumerate(output[:max_n]):
+                label_prediction = candidate['label'].split(' ')[-1] # remove "An image of "
+
+                if label_prediction == actual_label_str:
+                    found_at_index = n
+                    found_score = candidate["score"]
+                    break  
+
+            # count as correct for all top_k, top_(k+1), ... top(max_n)
+            if found_at_index != -1:
+                for k in range(found_at_index, max_n):
+                    correct[k] += 1
+                    correct_confidence[k] += found_score
+
+        for n in range(0, max_n):
+            acc = correct[n] / total if total > 0 else 0
+            avg_conf = (correct_confidence[n] / correct[n]) if correct[n] > 0 else 0
+            print(f"TOP_{n+1} on {cur_set} set:")
+            print(f"Total Correct: {correct[n]}")
+            print(f"Top_{n+1} accuracy: {correct[n] / total:.2f}")    
+            print(f"Avg. confidence of correct predictions: {avg_conf:.2f}")
+            print()
+
+        print("-" * 20)
