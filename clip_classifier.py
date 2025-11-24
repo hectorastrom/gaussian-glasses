@@ -5,6 +5,10 @@
 import os
 from PIL import Image
 from datasets import Dataset, DatasetDict, Features, Image as ImageFeature, ClassLabel, Value
+import torch as t
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from transformers import pipeline
 
 ##################################
 # Dataset loading
@@ -62,6 +66,8 @@ def load_cod10k_lazy() -> DatasetDict:
     Loads COD10K dataset with subclass as label. Lazy loading only loads
     filepaths, which are automatically decoded to images through datasets'
     ImageFeature() schema.
+    
+    Cols: 'image', 'label'
     """
     dataset_dict = {}
     
@@ -107,15 +113,53 @@ def load_cod10k_lazy() -> DatasetDict:
     
     return final_dataset
 
-dataset = load_cod10k_lazy()
+hf_dataset = load_cod10k_lazy()
 print("Success! Dataset loaded")
-print(dataset['train'].features)
-print(dataset['train'][0])
+print(hf_dataset['train'].features)
+print(hf_dataset['train'][0])
 
 ##################################
 # Rendering images from dset
 ##################################
+TARGET_SIZE = (512, 512)
+img_transform = transforms.Compose([
+    transforms.Resize(TARGET_SIZE),
+    transforms.ToTensor()
+])
 
-def transform_fn(samples):
+def transform_fn(sample):
     """Method to run on-the-fly for CLIP classifier"""
-    images = [x.convert('RGB') for x in samples['image']]
+    img = sample['image']
+    img = img.convert("RGB")
+    img = img_transform(img)
+    sample['image'] = img
+    return sample
+    
+BATCH_SIZE = 16    
+
+print("Transforming images for dataloader...")
+hf_dataset = hf_dataset.map(
+    transform_fn,
+    num_proc=3
+)
+print("Resized images!")
+
+hf_dataset.set_format('torch', columns=['image', 'label'])
+train_loader = DataLoader(hf_dataset["train"], batch_size=BATCH_SIZE, shuffle=True)
+test_loader = DataLoader(hf_dataset['test'], batch_size=BATCH_SIZE, shuffle=True)
+
+clip = pipeline(
+    task="zero-shot-image-classification",
+    model="openai/clip-vit-base-patch32",
+    dtype=t.bfloat16,
+    device=0
+)
+
+for batch in train_loader:
+    x, y = batch['image'], batch['label']
+    print(x)
+    print(y)
+    label = f"An image of {y}"
+    score = clip(x, [label])[0]['score']
+    break
+    
