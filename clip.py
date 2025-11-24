@@ -11,7 +11,9 @@ clip = pipeline(
 )
 
 print("Selecting from a predefined set of labels...")
-labels=["a photo of a man", "a photo of a dog", "a photo of a room", "a photo of a landscape", "a photo of a coffee cup"]
+# labels=["a photo of a man", "a photo of a dog", "a photo of a room", "a photo
+# of a landscape", "a photo of a coffee cup"]
+labels = ['idk', 'I do know']
 
 img_name = "outputs/output_img2img.png"
 source_img = Image.open(img_name)

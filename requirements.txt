@@ -6,3 +6,7 @@ transformers
 diffusers
 datasets
 accelerate
+trl==0.21.0 # only version that includes DDPOTrainer
+bitsandbytes # ddpotrainer
+peft # ddpotrainer
+wandb

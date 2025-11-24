@@ -85,5 +85,9 @@ class CLIPReward:
             labels = labels.to(probs.device)
             rewards = probs[torch.arange(batch_size, device=probs.device), labels]
 
+        # DDPOTrainer/Accelerate will call .cpu().numpy() on rewards.
+        # NumPy does not support bfloat16, so we convert to float32 here.
+        rewards = rewards.to(torch.float32)
+        
         # Return a tuple (reward_tensor, metadata_dict)
         return rewards, {}
