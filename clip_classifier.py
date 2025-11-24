@@ -3,7 +3,6 @@
 # @Email   : hastrom@mit.edu
 # @File    : clip_classifier.py
 import os
-from PIL import Image
 from datasets import Dataset, DatasetDict, Features, Image as ImageFeature, ClassLabel, Value
 import torch as t
 from transformers import pipeline
