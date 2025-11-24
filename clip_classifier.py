@@ -116,54 +116,52 @@ def load_cod10k_lazy() -> DatasetDict:
 if __name__ == "__main__":
     hf_dataset = load_cod10k_lazy()
     print("Success! Dataset loaded")
-    print(hf_dataset['train'].features)
-    print(hf_dataset['train'][0])
 
     ##################################
     # Rendering images from dset
     ##################################
-    TARGET_SIZE = (512, 512)
-    tensor_transform = transforms.Compose([
-        transforms.Resize(TARGET_SIZE),
-        transforms.ToTensor()
-    ])
-
-    def pytorch_transform_fn(example):
-        # Check if we are handling a single item (dict) or a batch (dict of lists)
-        # Add pixel_values col for training with torch. o.w. CLIP expects full PIL images
-        if isinstance(example['image'], list):
-            # Handle batch 
-            example['pixel_values'] = [tensor_transform(img.convert("RGB")) for img in example['image']]
-        else:
-            # Handle single item 
-            example['pixel_values'] = tensor_transform(example['image'].convert("RGB"))
-        return example
-    
-    hf_dataset.set_transform(pytorch_transform_fn) # runs lazily when accessed
-      
-    # not needed rn - would've been for training  
-    # BATCH_SIZE = 16    
-    # train_loader = DataLoader(hf_dataset["train"], batch_size=BATCH_SIZE, shuffle=True)
-    # test_loader = DataLoader(hf_dataset['test'], batch_size=BATCH_SIZE, shuffle=True)
-
     clip = pipeline(
         task="zero-shot-image-classification",
         model="openai/clip-vit-base-patch32",
         dtype=t.bfloat16,
-        device=0
+        device=0,
+        use_fast=True
     )
-    
-    class_features = hf_dataset['train'].features['label'] # ClassLabel mapper
-    # one sample
-    example = hf_dataset['train'][0]
-    pil_img = example['image']
-    label_int = example['label']
-    label_str = class_features.int2str(label_int)
-    
-    print(f"{label_int=}, {label_str=}")
 
+    class_features = hf_dataset['train'].features['label'] # ClassLabel mapper
     candidate_labels = [f"An image of {label}" for label in class_features.names]
+    BATCH_SIZE = 16
+    top_n = 1 # mark prediction within top_n of real label as correct
+
+    total = 0
+    correct = 0
+
+    print(f"Beginning evaluation of {len(hf_dataset['train'])} images...")
+    for i in range(0, len(hf_dataset["train"]), BATCH_SIZE):
+        batch_raw = hf_dataset["train"][i : i + BATCH_SIZE]
+        images = batch_raw['image'] # list of PIL images
+        labels = batch_raw['label'] # list of int labels
+        str_labels = class_features.int2str(labels) # list of str
+        total += len(images)
+
+        # handles batching internally
+        result = clip(images, candidate_labels) # B x C list of list of dicts
+
+        # evaluate accuracy
+        for i, scores in enumerate(result):
+            for candidate in scores[:top_n]:
+                label_prediction = candidate['label'].split(' ')[-1]
+                actual = str_labels[i]
+                # print(f"One of our predictions: {label_prediction}")
+                # print(f"actual label: {actual}")
+                # print()
+                if label_prediction == actual:
+                    correct += 1
+                break
+
+    print(f"Correct: {correct}")
+    print(f"Top_{top_n} accuracy: {correct / total}")
     
-    result = clip(pil_img, candidate_labels)
-    print(result)
-    
+    # RESULT:
+    # Correct: 1757
+    # Top_1 accuracy: 0.29283333333333333
