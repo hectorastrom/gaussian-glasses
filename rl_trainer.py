@@ -75,9 +75,13 @@ def my_image_loader():
     return next(my_generator)
 
 ##################################
+# Define reward
+##################################
+reward_fn = CLIPReward(class_names=dataset.all_classes, device=DEVICE)
+
+##################################
 # Build image hook
 ##################################
-
 # get fixed validation sample to use for hook
 val_prompt, val_image, val_meta = next(my_generator)
 val_image = val_image.unsqueeze(0) # (1, C, H, W)
@@ -129,20 +133,17 @@ def validation_hook(pipeline, noise_strength, wandb_step):
         
         after_img = output.images[0]
     
+    val_reward = reward_fn(input_image.unsqueeze(0), [val_prompt], [val_meta])
+    
     # prepare before image
     # (H, W, C) - this should be in [0, 1] range by default so might be overkill
     before_img = input_image.clone().detach().cpu().squeeze(0).permute(1, 2, 0).numpy()
     wandb.log({
         "validation/before_vs_after": [
             wandb.Image(before_img, caption=f"Before (Label: {val_meta['label_str']})"),
-            wandb.Image(after_img, caption=f"After (RL Process)")
+            wandb.Image(after_img, caption=f"After (prompt={val_prompt}, r={val_reward:.2f})")
         ]
     }, step=wandb_step)
-
-##################################
-# Define reward
-##################################
-reward_fn = CLIPReward(class_names=dataset.all_classes, device=DEVICE)
 
 
 ##################################
