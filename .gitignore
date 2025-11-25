@@ -9,6 +9,7 @@ datasets/*
 !datasets/README.md
 outputs/*
 wandb
+ddpo_logs
 
 # Virtual environments
 .venv

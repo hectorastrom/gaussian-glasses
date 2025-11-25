@@ -8,6 +8,7 @@ import numpy as np
 from trl import DDPOTrainer, DefaultDDPOStableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import rescale_noise_cfg
 from dataclasses import dataclass
+from accelerate.utils import ProjectConfiguration
 
 # ==========================================
 # 1. TRL/DDPO Helper Classes & Math
@@ -43,14 +44,30 @@ def _get_variance(self, timestep, prev_timestep):
 
     All tensors (alphas_cumprod, final_alpha_cumprod, timestep, prev_timestep)
     are placed on the same device to avoid device mismatch in gather.
+    Handles both scalar and batched timesteps.
     """
-    device = timestep.device
+    # Ensure we have tensors
+    if not torch.is_tensor(timestep):
+        timestep = torch.as_tensor(timestep)
+    if not torch.is_tensor(prev_timestep):
+        prev_timestep = torch.as_tensor(prev_timestep)
+
+    # Use the scheduler's alpha device as the "home" device for the variance math
+    device = self.alphas_cumprod.device
+    timestep = timestep.to(device)
+    prev_timestep = prev_timestep.to(device)
+
+    # Make sure gather sees 1D index tensors
+    if timestep.dim() == 0:
+        timestep = timestep.unsqueeze(0)
+    if prev_timestep.dim() == 0:
+        prev_timestep = prev_timestep.unsqueeze(0)
+
+    timestep = timestep.long()
+    prev_timestep = prev_timestep.long()
 
     alphas_cumprod = self.alphas_cumprod.to(device)
     final_alpha_cumprod = self.final_alpha_cumprod.to(device)
-
-    timestep = timestep.to(device)
-    prev_timestep = prev_timestep.to(device)
 
     alpha_prod_t = torch.gather(alphas_cumprod, 0, timestep)
     alpha_prod_t_prev = torch.where(
@@ -82,6 +99,9 @@ def scheduler_step(
     Device-safe scheduler step used for:
     - sampling inside i2i_pipeline_step
     - training loss (via I2IDDPOStableDiffusionPipeline.scheduler_step)
+
+    This version is robust to scalar timesteps (0-d tensors / ints) and
+    batched timesteps (1-d tensors).
     """
     if self.num_inference_steps is None:
         raise ValueError(
@@ -89,18 +109,31 @@ def scheduler_step(
             "after creating the scheduler"
         )
 
+    device = sample.device
+
+    # Normalize timestep to a tensor on the correct device
+    if not torch.is_tensor(timestep):
+        timestep = torch.as_tensor(timestep, device=device)
+    else:
+        timestep = timestep.to(device)
+
+    # Compute previous timestep in the same shape as timestep
     prev_timestep = timestep - self.config.num_train_timesteps // self.num_inference_steps
     prev_timestep = torch.clamp(
         prev_timestep, 0, self.config.num_train_timesteps - 1
     )
 
-    device = sample.device
+    # Ensure 1D long tensors so torch.gather works for both scalar and batched cases
+    if timestep.dim() == 0:
+        timestep = timestep.unsqueeze(0)
+    if prev_timestep.dim() == 0:
+        prev_timestep = prev_timestep.unsqueeze(0)
+
+    timestep = timestep.long()
+    prev_timestep = prev_timestep.long()
 
     alphas_cumprod = self.alphas_cumprod.to(device)
     final_alpha_cumprod = self.final_alpha_cumprod.to(device)
-
-    timestep = timestep.to(device)
-    prev_timestep = prev_timestep.to(device)
 
     alpha_prod_t = torch.gather(alphas_cumprod, 0, timestep)
     alpha_prod_t_prev = torch.where(
@@ -144,6 +177,7 @@ def scheduler_step(
             -self.config.clip_sample_range, self.config.clip_sample_range
         )
 
+    # Compute variance on the scheduler's native device, then broadcast back
     variance = _get_variance(self, timestep, prev_timestep)
     std_dev_t = eta * variance ** 0.5
     std_dev_t = _left_broadcast(std_dev_t, sample.shape).to(device)
@@ -290,6 +324,7 @@ def i2i_pipeline_step(
                     guidance_rescale=guidance_rescale,
                 )
 
+            # NOTE: this now safely handles scalar t (0-d tensor) inside scheduler_step
             scheduler_output = scheduler_step(
                 self.scheduler, noise_pred, t, latents, eta
             )
@@ -324,6 +359,7 @@ class I2IDDPOStableDiffusionPipeline(DefaultDDPOStableDiffusionPipeline):
             hasattr(self.sd_pipeline.scheduler, "alphas_cumprod")
             and self.sd_pipeline.scheduler.alphas_cumprod is not None
         ):
+            # Keep alphas on CPU to avoid device mismatch in custom scheduler code
             self.sd_pipeline.scheduler.alphas_cumprod = (
                 self.sd_pipeline.scheduler.alphas_cumprod.cpu()
             )
@@ -347,7 +383,7 @@ class ImageDDPOTrainer(DDPOTrainer):
     def __init__(self, *args, noise_strength=0.6, **kwargs):
         self.noise_strength = noise_strength
         super().__init__(*args, **kwargs)
-
+            
     def _generate_samples(self, iterations, batch_size):
         samples = []
         prompt_image_pairs = []
@@ -412,7 +448,7 @@ class ImageDDPOTrainer(DDPOTrainer):
                 log_probs = sd_output.log_probs # list length = effective_steps
 
             # Convert lists to tensors
-            latents = torch.stack(latents, dim=1)   # (B, num_effective+1, C, H, W)
+            latents = torch.stack(latents, dim=1)      # (B, num_effective+1, C, H, W)
             log_probs = torch.stack(log_probs, dim=1)  # (B, num_effective)
 
             full_steps = self.config.sample_num_steps

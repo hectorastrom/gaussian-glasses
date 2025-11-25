@@ -2,14 +2,15 @@
 # @Author  : Hector Astrom
 # @Email   : hastrom@mit.edu
 # @File    : rl_trainer.py
+# Run with `accelerate launch rl_trainer.py``
 
 from trl import DDPOConfig
 from ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
 from reward import CLIPReward
 from COD_dataset import build_COD_torch_dataset
 from torch.utils.data import DataLoader
-import torch
 from peft import LoraConfig
+import os
 
 ##################################
 # Constants
@@ -128,6 +129,28 @@ trainer = ImageDDPOTrainer(
     sd_pipeline=pipeline,
     noise_strength=NOISE_STRENGTH
 )
+
+##################################
+# Fix accelerate save_state bug
+##################################
+# 1. Capture the original method
+original_save_state = trainer.accelerator.save_state
+
+# 2. Define a wrapper that forces a default output_dir
+def patched_save_state(output_dir=None, **kwargs):
+    if output_dir is None:
+        # Force the path if it's missing
+        output_dir = os.path.join(config.project_kwargs["project_dir"], "checkpoints")
+    
+    # Ensure the directory exists (the root cause of your error)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    return original_save_state(output_dir=output_dir, **kwargs)
+
+# 3. Apply the patch to the live object
+trainer.accelerator.save_state = patched_save_state
+print(f"DEBUG: Monkey-patched accelerator.save_state to force output_dir='{config.project_kwargs['project_dir']}'")
+
 
 ##################################
 # Begin training!
