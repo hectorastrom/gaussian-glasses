@@ -20,6 +20,7 @@ from ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
 from reward import CLIPReward
 from COD_dataset import build_COD_torch_dataset
 from torch.utils.data import DataLoader
+import numpy as np
 import os
 import torch
 import wandb
@@ -138,11 +139,12 @@ if __name__ == "__main__":
             
             after_img = output.images[0]
         
-        val_reward = reward_fn(input_image.unsqueeze(0), [val_prompt], [val_meta])
-        
         # prepare before image
         # (H, W, C) - this should be in [0, 1] range by default so might be overkill
         before_img = input_image.clone().detach().cpu().squeeze(0).permute(1, 2, 0).numpy()
+        
+        batched_before = np.expand_dims(before_img, axis=0) # for reward fn
+        val_reward = reward_fn(batched_before, [val_prompt], [val_meta])
         wandb.log({
             "validation/before_vs_after": [
                 wandb.Image(before_img, caption=f"Before (Label: {val_meta['label_str']})"),
