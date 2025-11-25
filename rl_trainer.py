@@ -20,7 +20,7 @@ import wandb
 LOADER_BATCH_SIZE = 16 # limited by CPU - faster to fetch many at once
 GPU_BATCH_SIZE = 8 # limited by VRAM
 # TODO: Play around with what prompt works best! Can't be class dependent
-PROMPT = "A high quality, clear photo"
+PROMPT = ""
 NUM_WORKERS = 1
 NOISE_STRENGTH = 0.2 # controls adherance to original image (1.0 = pure noise, 0.0 = no change)
 SAMPLE_NUM_STEPS = 50 # diffusion steps to take
@@ -178,18 +178,9 @@ config = DDPOConfig(
     tracker_project_name="67960-ddpo-classifier-optimization",
 )
 
-# looks right: https://github.com/huggingface/trl/pull/1165
-# TODO: tune these
-lora_config = LoraConfig(
-    r=4,
-    lora_alpha=4,
-    init_lora_weights="gaussian",
-    target_modules=["to_k", "to_q", "to_v", "to_out.0"] 
-)
-
 pipeline = I2IDDPOStableDiffusionPipeline(
     pretrained_model_name="stable-diffusion-v1-5/stable-diffusion-v1-5",
-    use_lora=True,
+    use_lora=True, # only thing you need to enable LoRA (see pipeline class definition)
 )
 
 trainer = ImageDDPOTrainer(
@@ -198,7 +189,7 @@ trainer = ImageDDPOTrainer(
     prompt_function=my_image_loader, # custom prompt function to send images
     sd_pipeline=pipeline,
     noise_strength=NOISE_STRENGTH,
-    debug_hook=validation_hook
+    debug_hook=validation_hook,
 )
 
 ##################################

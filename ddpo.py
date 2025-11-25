@@ -8,7 +8,7 @@ import numpy as np
 from trl import DDPOTrainer, DefaultDDPOStableDiffusionPipeline
 from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import rescale_noise_cfg
 from dataclasses import dataclass
-from accelerate.utils import ProjectConfiguration
+import wandb
 
 # ==========================================
 # 1. TRL/DDPO Helper Classes & Math
@@ -386,10 +386,10 @@ class ImageDDPOTrainer(DDPOTrainer):
         super().__init__(*args, **kwargs)
             
     def _generate_samples(self, iterations, batch_size):
-        current_step = self.state.global_step # for wandb sync
+        current_step = wandb.run.step if wandb.run is not None else 0
         # Run hook to visualize samples each sampling iteration
         if self.debug_hook is not None and self.accelerator.is_main_process:
-            self.debug_hook(self.sd_pipeline, self.noise_strength, self.state.global_step)
+            self.debug_hook(self.sd_pipeline, self.noise_strength, current_step)
         
         samples = []
         prompt_image_pairs = []
