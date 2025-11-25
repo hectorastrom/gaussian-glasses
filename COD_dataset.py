@@ -129,6 +129,9 @@ def load_cod10k_lazy() -> DatasetDict:
 ##################################
 
 tensor_transform = transforms.Compose([
+    # add data augmentation methods
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),
     transforms.Resize((512, 512)),
     transforms.ToTensor(),
 ])

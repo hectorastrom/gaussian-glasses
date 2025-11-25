@@ -25,6 +25,7 @@ NUM_WORKERS = 1
 NOISE_STRENGTH = 0.2 # controls adherance to original image (1.0 = pure noise, 0.0 = no change)
 SAMPLE_NUM_STEPS = 50 # diffusion steps to take
 SAMPLE_BATCHES_PER_EPOCH = 8 # num batches to avg reward on per epoch
+EPOCHS = 500
 DEVICE = 'cuda'
 
 ##################################
@@ -139,7 +140,7 @@ reward_fn = CLIPReward(class_names=dataset.all_classes, device=DEVICE)
 ##################################
 config = DDPOConfig(
     # --- Logging & General ---
-    num_epochs=100,
+    num_epochs=EPOCHS,
     log_with= "wandb",               # Highly recommended to visualize the Reward curve
     mixed_precision="fp16",         # Standard for SD 1.5
     allow_tf32=True,
