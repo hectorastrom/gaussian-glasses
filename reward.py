@@ -114,5 +114,5 @@ class CLIPReward:
         rewards = rewards.to(torch.float32)
 
         # Return a tuple (reward_tensor, metadata_dict)
-        print(f"Avg reward for {len(rewards)} images: {rewards.mean():.2f}")
+        # print(f"Avg reward for {len(rewards)} images: {rewards.mean():.2f}")
         return rewards, {}

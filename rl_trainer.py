@@ -24,10 +24,23 @@ import numpy as np
 import os
 import torch
 import wandb
+from accelerate import Accelerator
+from accelerate.utils import ProjectConfiguration
 
 ##################################
 # Constants
 ##################################
+acc_project_config = ProjectConfiguration(
+    project_dir="./ddpo_logs",
+    logging_dir="./ddpo_logs/runs"
+)
+# initialize accelerator instance exactly as DDPOTrainer will so they don't conflict
+accelerator = Accelerator(
+    log_with="wandb", 
+    mixed_precision="fp16",
+    project_config=acc_project_config
+)
+
 # TODO: Play around with what prompt works best! Can't be class dependent
 PROMPT = ""
 
@@ -37,19 +50,25 @@ NOISE_STRENGTH = 0.2 # controls adherance to original image (1.0 = pure noise, 0
 SAMPLE_NUM_STEPS = 50 # diffusion steps to take
 
 LOADER_BATCH_SIZE = 16 # limited by CPU - faster to fetch many at once
-# TODO: correct so grad_accum steps * gpu_batch_size = 64, and
-# sample_batches_per_epoch * 64 = 256 (this matches the paper)
+GPU_BATCH_SIZE = 4 # Hardware limit per A10G
+TARGET_GLOBAL_BATCH_SIZE = 64 # From DDPO paper
 
-GPU_BATCH_SIZE = 4 # limited by VRAM
-GRAD_ACCUM_STEPS = 2 # pseudo batch size (one averaged grad update) =  * 10 = 60
-SAMPLE_BATCHES_PER_EPOCH = 2 # num batches to avg reward on per epoch
+total_gpu_throughput = GPU_BATCH_SIZE * accelerator.num_processes
+GRAD_ACCUM_STEPS = max(1, int(TARGET_GLOBAL_BATCH_SIZE / total_gpu_throughput))
+# num batches to avg reward on per epoch -> 256 / target_global_batch_size
+SAMPLE_BATCHES_PER_EPOCH = max(GRAD_ACCUM_STEPS, 4) 
 
 EPOCHS = 500
-DEVICE = 'cuda'
-NUM_WORKERS = 1
-
+DEVICE = accelerator.device
+NUM_WORKERS = 4
 
 if __name__ == "__main__":
+    if accelerator.is_main_process:
+        print(f"Running on {accelerator.num_processes} GPUs.")
+        print(f"Per-device batch: {GPU_BATCH_SIZE}")
+        print(f"Total instantaneous batch: {total_gpu_throughput}")
+        print(f"Gradient Accumulation steps: {GRAD_ACCUM_STEPS}")
+        print(f"Effective Global Batch: {total_gpu_throughput * GRAD_ACCUM_STEPS}")
     ##################################
     # Construct dataset
     ##################################
@@ -57,6 +76,7 @@ if __name__ == "__main__":
     dataset = build_COD_torch_dataset('train')
     overfit_dataset = Subset(dataset, torch.arange(16)) # first 16 samples
     train_loader = DataLoader(overfit_dataset, batch_size=LOADER_BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
+    train_loader = accelerator.prepare(train_loader)
 
     # (called as ... = [self.prompt_fn() for _ in range(batch_size)])
     def create_data_generator(dataloader, prompt):
@@ -125,6 +145,9 @@ if __name__ == "__main__":
         Runs validation image through pipeline, logging before and after diffusion.
         Uses cached reward for the input image.
         """
+        if not accelerator.is_main_process:
+            return 
+        
         pipeline.vae.eval()
         pipeline.unet.eval()
         
@@ -245,6 +268,7 @@ if __name__ == "__main__":
         sd_pipeline=pipeline,
         noise_strength=NOISE_STRENGTH,
         debug_hook=validation_hook,
+        # DDPOTrainer builds its own Accelerator instance
     )
 
     ##################################
