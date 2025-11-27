@@ -291,5 +291,6 @@ if __name__ == "__main__":
     ##################################
     # Begin training!
     ##################################
-    print("Commencing training!")
+    if accelerator.is_main_process:
+        print("Commencing training!")
     trainer.train()

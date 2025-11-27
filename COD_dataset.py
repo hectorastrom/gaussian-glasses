@@ -72,6 +72,7 @@ def load_cod10k_lazy() -> DatasetDict:
     
     Cols: 'image', 'label', 'image_path'
     """
+    assert os.path.isdir(DATASET_ROOT), "ERORR: Dataset folder is missing."
     dataset_dict = {}
     
     # schema is info datasets need to load image on demand from filepath
