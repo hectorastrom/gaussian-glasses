@@ -4,90 +4,69 @@
 # @File    : reward.py
 
 import torch
-import torchvision.transforms.functional as TF
-from transformers import pipeline
+import torch.nn.functional as F
+from transformers import CLIPModel, CLIPTokenizerFast
 from typing import Any, List, Dict
 
 eps = 1e-6
 
 class CLIPReward:
     def __init__(self, class_names: List[str], device: str | int = 0, reward_variant: str = "logit_change"):
-        """
-        Initializes CLIP and pre-computes text embeddings for all class labels.
-        """
         if reward_variant not in ["logit_max_margin", "logit_change"]:
             raise ValueError(f"Invalid reward_variant: {reward_variant}. Must be 'logit_max_margin' or 'logit_change'.")
-            
+
         self.reward_variant = reward_variant
         self.device = device
         self.class_names = class_names
 
-        print(f"Loading CLIP and caching {len(class_names)} class embeddings...")
+        self.clip_model = CLIPModel.from_pretrained(
+            "openai/clip-vit-base-patch32",
+            torch_dtype=torch.float16,
+        ).to(device)
+        self.clip_model.eval()
+        for p in self.clip_model.parameters():
+            p.requires_grad_(False)
 
-        self.clip_pipe = pipeline(
-            task="zero-shot-image-classification",
-            model="openai/clip-vit-base-patch32",
-            dtype=torch.bfloat16, # accelerator runs in fp16 so will this even be bf16?
-            use_fast=True,
-            device=device
-        )
+        self.tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch32")
 
-        # Cache Text Embeddings
+        # Cache text embeddings
         prompts = [f"An image of {label}" for label in class_names]
-
-        tokenizer = self.clip_pipe.tokenizer
-        model = self.clip_pipe.model
-
-        inputs = tokenizer(prompts, padding=True, return_tensors="pt").to(model.device)
+        text_inputs = self.tokenizer(prompts, padding=True, return_tensors="pt").to(device)
 
         with torch.no_grad():
-            text_features = model.get_text_features(**inputs)
-            norms = text_features.norm(p=2, dim=-1, keepdim=True)
-            self.cached_text_embeds = text_features / (norms + eps)
+            text_features = self.clip_model.get_text_features(**text_inputs)
+            text_features = text_features / (text_features.norm(p=2, dim=-1, keepdim=True) + eps)
+            self.cached_text_embeds = text_features
 
-        print("CLIP initialized and embeddings cached.")
-    
+        # OpenAI CLIP normalization constants (same as HF defaults)
+        self.clip_mean = torch.tensor([0.48145466, 0.4578275, 0.40821073], device=device).view(1, 3, 1, 1)
+        self.clip_std = torch.tensor([0.26862954, 0.26130258, 0.27577711], device=device).view(1, 3, 1, 1)
+
+    def _preprocess_images(self, images: torch.Tensor) -> torch.Tensor:
+        # images: (B, 3, H, W) in [0, 1]
+        images = images.to(device=self.device, dtype=torch.float32)
+        images = torch.clamp(images, 0.0, 1.0)
+
+        # CLIP ViT-B/32 expects 224x224
+        images = F.interpolate(images, size=(224, 224), mode="bicubic", align_corners=False)
+
+        images = (images - self.clip_mean) / self.clip_std
+        return images.to(dtype=self.clip_model.dtype)
+
     def _compute_target_logits(self, images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        """
-        Helper to run a batch of images through CLIP and return the target class logits.
-        
-        Args:
-            images: (B, C, H, W) Tensor, values [0, 1]
-            labels: (B,) Tensor of target class indices
-            
-        Returns:
-            target_logits: (B,) Tensor of logits for the target class
-        """
         batch_size = images.shape[0]
-
-        # 1. Convert to PIL
-        pil_images = []
-        for i in range(batch_size):
-            img_tensor = images[i].detach().cpu()
-            img_tensor = torch.clamp(img_tensor, 0, 1)
-            pil_images.append(TF.to_pil_image(img_tensor))
-
-        # 2. Process Images
-        image_inputs = self.clip_pipe.image_processor(
-            images=pil_images, 
-            return_tensors="pt"
-        ).to(self.clip_pipe.model.device)
+        pixel_values = self._preprocess_images(images)
 
         with torch.no_grad():
-            # 3. Get Image Embeddings & Normalize
-            image_features = self.clip_pipe.model.get_image_features(**image_inputs)
-            norms = image_features.norm(p=2, dim=-1, keepdim=True)
-            image_features = image_features / (norms + eps)
+            image_features = self.clip_model.get_image_features(pixel_values=pixel_values)
+            image_features = image_features / (image_features.norm(p=2, dim=-1, keepdim=True) + eps)
 
-            # 4. Cosine Similarity -> Logits -> Probs
-            logit_scale = self.clip_pipe.model.logit_scale.exp()
-            # gives us raw alignment score
+            logit_scale = self.clip_model.logit_scale.exp()
             logits = logit_scale * (image_features @ self.cached_text_embeds.t())
 
-            # 5. Gather specific label confidence
             labels = labels.to(logits.device)
             target_logits = logits[torch.arange(batch_size, device=logits.device), labels].to(torch.float32)
-            
+
         return logits, target_logits
         
     def _logit_max_margin_reward(self, images: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:

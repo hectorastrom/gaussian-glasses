@@ -450,16 +450,18 @@ class ImageDDPOTrainer(DDPOTrainer):
                 init_latents = self.sd_pipeline.vae.encode(input_images).latent_dist.sample()
                 init_latents = init_latents * 0.18215
 
-                max_timesteps = self.sd_pipeline.scheduler.config.num_train_timesteps
-                t_start = int(max_timesteps * self.noise_strength)
+                # Align the noise timestep with the first denoising timestep the pipeline will run.
+                self.sd_pipeline.scheduler.set_timesteps(self.config.sample_num_steps, device=self.accelerator.device)
+                full_timesteps = self.sd_pipeline.scheduler.timesteps  # shape [num_inference_steps]
 
-                timesteps = torch.tensor(
-                    [t_start] * batch_size, device=self.accelerator.device
-                ).long()
+                start_idx = int(len(full_timesteps) * (1 - self.noise_strength))
+                start_idx = max(0, min(start_idx, len(full_timesteps) - 1))
+
+                t_start = full_timesteps[start_idx]  # this is in scheduler timestep space
+                timesteps = t_start.repeat(batch_size).to(self.accelerator.device).long()
+
                 noise = torch.randn_like(init_latents)
-                noisy_latents = self.sd_pipeline.scheduler.add_noise(
-                    init_latents, noise, timesteps
-                )
+                noisy_latents = self.sd_pipeline.scheduler.add_noise(init_latents, noise, timesteps)
 
                 # 3. RUN PIPELINE
                 sd_output = self.sd_pipeline(

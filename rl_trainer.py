@@ -42,13 +42,15 @@ accelerator = Accelerator(
 )
 
 # TODO: Play around with what prompt works best! Can't be class dependent
-PROMPT = ""
+PROMPT = "ORACLE"
 REWARD_VARIANT = "logit_change"
+OVERFIT_DSET_SIZE = 1000 # num samples to use for testing a small dataset
 
 # NOTE: The actual number of diffusion steps take is noise_strength *
 # sample_num_steps
 NOISE_STRENGTH = 0.2 # controls adherance to original image (1.0 = pure noise, 0.0 = no change)
 SAMPLE_NUM_STEPS = 50 # diffusion steps to take
+USE_PER_PROMPT_STATTRACKING = True
 
 LOADER_BATCH_SIZE = 16 # limited by CPU - faster to fetch many at once
 GPU_BATCH_SIZE = 4 # Hardware limit per A10G
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     ##################################
     # FIXME: Only using 16 images to try overfitting / reward hacking. If this doesn't work we're cooked
     dataset = build_COD_torch_dataset('train')
-    overfit_dataset = Subset(dataset, torch.arange(16)) # first 16 samples
+    overfit_dataset = Subset(dataset, torch.arange(OVERFIT_DSET_SIZE))
     train_loader = DataLoader(overfit_dataset, batch_size=LOADER_BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS)
     train_loader = accelerator.prepare(train_loader)
 
@@ -84,27 +86,32 @@ if __name__ == "__main__":
         while True:
             for batch in dataloader:
                 images, labels = batch['pixel_values'], batch['label']
+                paths = batch['image_path']
                 # iterature through batch and yield items one by one
                 for i in range(len(images)):
                     image = images[i].to(DEVICE)
                     label = labels[i].item()
                     
                     # unique identifier to work with per_prompt_stat_tracking
-                    unique_id = f"{dataset.label2str(label)}_{i}" # e.g. 'seahorse_3'
+                    unique_path = paths[i]
                     
                     # 3 necessary return items
                     metadata = {
                         "label": label,
                         "label_str": dataset.label2str(label),
                         "original_image": image.clone(),
-                        "unique_id": unique_id
+                        "unique_path": unique_path
                     }
                     
+                    prompt_str : str
                     if prompt == "ORACLE":
-                        prompt = f"A clear photo of {dataset.label2str(label)}"
-                    
+                        prompt_str = f"A clear photo of {dataset.label2str(label)}"
+                    else:
+                        prompt_str = prompt
+                        
                     # always add id
-                    prompt_str = f"{prompt} id:{unique_id}"
+                    if USE_PER_PROMPT_STATTRACKING: 
+                        prompt_str = f"{prompt_str} id:{unique_path}"
                     
                     # prompt + image are analogous to just prompt within DDPOTrainer
                     yield prompt_str, image, metadata
@@ -177,7 +184,18 @@ if __name__ == "__main__":
             ).input_ids.to(device)
             
             prompt_embeds = pipeline.text_encoder(prompt_ids)[0]
-            neg_prompt_embeds = torch.zeros_like(prompt_embeds)
+            uncond_ids = pipeline.tokenizer(
+                [""],
+                return_tensors="pt",
+                padding="max_length",
+                truncation=True,
+                max_length=77,
+            ).input_ids.to(device)
+
+            with torch.no_grad():
+                uncond_embeds = pipeline.text_encoder(uncond_ids)[0]
+
+            neg_prompt_embeds = uncond_embeds.repeat(prompt_embeds.shape[0], 1, 1)
             
             output = pipeline(
                 prompt_embeds=prompt_embeds,
@@ -199,12 +217,17 @@ if __name__ == "__main__":
         rewards, _ = reward_fn(after_img_tensor, [val_prompt], [val_meta])
         after_reward = rewards[0].item()
         
+        after_str = val_prompt
+        if USE_PER_PROMPT_STATTRACKING:
+            # I just don't wanna see the big ID think
+            after_str = f"{val_prompt.split(' id:')[0]} id:..."
+        
         wandb.log({
             "validation/before_vs_after": [
                 # Use cached numpy image and cached reward
                 wandb.Image(val_before_img_vis, caption=f"Before (label='{val_meta['label_str']}', r={val_before_reward:.2f})"),
                 # Use new PIL image and new reward
-                wandb.Image(after_img_pil, caption=f"After (RL, prompt='{val_prompt}', r={after_reward:.2f})")
+                wandb.Image(after_img_pil, caption=f"After (RL, prompt='{after_str}', r={after_reward:.2f})")
             ]
         }, step=wandb_step)
 
@@ -239,7 +262,7 @@ if __name__ == "__main__":
         
         # --- Optimizer & LoRA Specifics ---
         # LoRA usually requires a slightly lower LR than full finetuning. 
-        train_learning_rate=1e-5,       
+        train_learning_rate=1e-5, # paper used 1e-5
         train_use_8bit_adam=True,    
         
         # --- Critical for Image-to-Image ---
@@ -247,7 +270,7 @@ if __name__ == "__main__":
         # of the reward specifically for that image. 
         # A hard image (reward -10) will eventually have a baseline of -10.
         # If the model gets -9, that's a +1 advantage!
-        per_prompt_stat_tracking=True,  
+        per_prompt_stat_tracking=False, # disable when we use logit_change reward
         
         # --- Project Info ---
         project_kwargs={
