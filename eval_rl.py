@@ -9,6 +9,7 @@ from COD_dataset import build_COD_torch_dataset
 from diffusers import StableDiffusionImg2ImgPipeline
 import torch
 from torch.utils.data import DataLoader
+from torchvision.transforms.functional import to_pil_image
 
 test_set = build_COD_torch_dataset(split_name="test")
 
@@ -20,8 +21,17 @@ model_id = "stable-diffusion-v1-5/stable-diffusion-v1-5"
 ###############################
 strength = 0.4
 guidance = 7.0
-lora_path = "./weights/robust-totem-89/epoch189/lora.safetensors"
 prompt = ""
+
+# where to find weights
+# download weights with e.g. aws s3 cp s3://hectorastrom-dl-final/checkpoints/robust-totem-89/epoch224/pytorch_lora_weights.safetensors weights/robust-totem-89/epoch224/lora.safetensors
+wandb_runname = "robust-totem-89"
+epoch_num = 224
+epoch_str = f"/epoch{epoch_num}/" if epoch_num is not None else ""
+lora_path = f"./weights/{wandb_runname}{epoch_str}lora.safetensors"
+
+before_image_name = f"before_generated_img_{epoch_num}.png"
+after_image_name = f"generated_img_{epoch_num}.png"
 
 pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
     model_id,
@@ -36,24 +46,26 @@ test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
 
 # pull much of this from img2img.py and clip_classifier.py
 for item in test_set:
+    # (C, H, W) = (3, 512, 512) if batch_size is 1
     img_tensors = item["pixel_values"].to(pipe.device)
     label = item["label"]  # int
-    print(f"Original image: {item['image_path']}")
+    pil_img = to_pil_image(img_tensors)
+    pil_img.save(f"outputs/{before_image_name}")
+    print(f"Saved outputs/{before_image_name}")
     generations = pipe(
         prompt,
         img_tensors,
         strength=strength,
         guidance_scale=guidance,
-        # FIXME: uh oh - not sure what the right value for this is. In ddpo.py, we had to
-        # patch num_inference_steps to depend on strength, otherwise our latent and
-        # reward tensors were of the wrong dim. But Img2ImgPipeline PROBABLY already
-        # does this for us. so we might be double-applying strength here?
-        num_inference_steps=50 * strength,
+        # This should be 50, as it is in rl_trainer. The pipeline knows the
+        # first denoising timestep should be at effective timestep 
+        # 50 * (1.0 - strength). 
+        num_inference_steps=50, 
         output_type='pil'
     ).images
     break
 
 gen_image = generations[0]
-gen_image.save('outputs/generated_img.png')
-print("Saved generated_img.png")
+gen_image.save(f'outputs/{after_image_name}')
+print(f"Saved outputs/{after_image_name}")
 
