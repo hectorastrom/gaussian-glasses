@@ -48,6 +48,12 @@ def parse_args():
         help="The variant of the CLIP reward function to use."
     )
     parser.add_argument(
+        "--clip_variant", 
+        type=str, 
+        default="openai/clip-vit-base-patch16", 
+        help="CLIP model name to use (default openai/clip-vit-base-patch16)"
+    )
+    parser.add_argument(
         "--overfit_dset_size", 
         type=int, 
         default=128, 
@@ -224,7 +230,12 @@ if __name__ == "__main__":
     ##################################
     # Define reward
     ##################################
-    reward_fn = CLIPReward(class_names=dataset.all_classes, device=DEVICE, reward_variant=args.reward_variant)
+    reward_fn = CLIPReward(
+        class_names=dataset.all_classes, 
+        device=DEVICE, 
+        reward_variant=args.reward_variant,
+        model_name=args.clip_variant
+    )
 
     ##################################
     # Build image hook

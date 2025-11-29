@@ -11,23 +11,27 @@ from typing import Any, List, Dict
 eps = 1e-6
 
 class CLIPReward:
-    def __init__(self, class_names: List[str], device: str | int = 0, reward_variant: str = "logit_change"):
+    def __init__(self, class_names: List[str], device: str | int = 0, reward_variant: str = "logit_change", model_name=None):
         if reward_variant not in ["logit_max_margin", "logit_change"]:
             raise ValueError(f"Invalid reward_variant: {reward_variant}. Must be 'logit_max_margin' or 'logit_change'.")
 
         self.reward_variant = reward_variant
         self.device = device
         self.class_names = class_names
+        
+        # previously used "openai/clip-vit-base-patch32", but patches too big
+        assert model_name is not None, "Model name is required!"
+        self.model_name = model_name
 
         self.clip_model = CLIPModel.from_pretrained(
-            "openai/clip-vit-base-patch32",
+            self.model_name,
             torch_dtype=torch.float16,
         ).to(device)
         self.clip_model.eval()
         for p in self.clip_model.parameters():
             p.requires_grad_(False)
 
-        self.tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch32")
+        self.tokenizer = CLIPTokenizerFast.from_pretrained(self.model_name)
 
         # Cache text embeddings
         prompts = [f"An image of {label}" for label in class_names]
