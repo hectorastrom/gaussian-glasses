@@ -10,6 +10,11 @@ Exploration-phase of 6.7960 final project.
   - If using multi-gpu training, make sure to select the # gpus
 - Launch RL DDPO loop with `accelerate launch rl_trainer.py`
 
+During training or at the end, upload checkpoints with: 
+```bash
+aws s3 cp ddpo_logs/{TIMESTAMP}/checkpoints s3://hectorastrom-dl-final/checkpoints/{WANDB_RUN_NAME}/{optional: epoch_num} --recursive
+```
+
 ## File structure
 **Relevant files to RL Objective**:
 - COD_dataset.py - builds the dataset object to work with the COD dataset
