@@ -54,6 +54,12 @@ def parse_args():
         help="CLIP model name to use (default openai/clip-vit-base-patch16)"
     )
     parser.add_argument(
+        "--lpips_weight", 
+        type=float, 
+        default=0.3, 
+        help="Weight of lpips (perceptual similiarty) loss (negative reward) - default 0.3"
+    )
+    parser.add_argument(
         "--overfit_dset_size", 
         type=int, 
         default=128, 
@@ -234,7 +240,8 @@ if __name__ == "__main__":
         class_names=dataset.all_classes, 
         device=DEVICE, 
         reward_variant=args.reward_variant,
-        model_name=args.clip_variant
+        model_name=args.clip_variant,
+        lpips_weight=args.lpips_weight
     )
 
     ##################################

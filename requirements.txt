@@ -11,3 +11,4 @@ trl==0.21.0 # only version that includes DDPOTrainer
 bitsandbytes # ddpotrainer
 peft # ddpotrainer
 wandb
+lpips
