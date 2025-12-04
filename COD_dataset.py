@@ -44,6 +44,7 @@ def image_label_generator(split_name: str):
     Generator function to yield (image, label_name) pairs.
     
     Note that images are stored as image_paths, and decoded by datasets.
+    NonCAM images are excluded - only CAM (camouflaged) images are included.
     """
     # 'Train/Images' and 'Test/Images' structure
     split_path = os.path.join(DATASET_ROOT, split_name, "Image")
@@ -53,6 +54,10 @@ def image_label_generator(split_name: str):
 
     for filename in sorted(os.listdir(split_path)):    
         if filename.endswith(".jpg"): # only jpg - i checked
+            # Skip NonCAM images - only use CAM images
+            if "NonCAM" in filename:
+                continue
+            
             file_path = os.path.join(split_path, filename)
             label_name = get_label_from_filename(filename)
             
@@ -92,8 +97,8 @@ def load_cod10k_lazy() -> DatasetDict:
         
     raw_datasets = DatasetDict(dataset_dict)
     
-    # filter out superclasses
-    # takes train dataset from 6000 -> 4190 images
+    # filter out superclasses and NonCAM images (only CAM images are included)
+    # NonCAM images are already filtered in image_label_generator
     raw_datasets = raw_datasets.filter(
         lambda x: x['label_name'] is not None,
         num_proc=os.cpu_count() // 2
