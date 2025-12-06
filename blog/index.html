@@ -705,17 +705,17 @@
           <div style="flex: 0 0 auto; width: 280px;">
             <div style="display: flex; gap: 8px;">
               <div style="flex: 1;">
-                <img src="./images/original_1.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <img src="./images/good_no_prompt_sft_before_1.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
                 <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
                   <strong>Before</strong><br/>
-                  Crocodile
+                  Grasshopper
                 </p>
               </div>
               <div style="flex: 1;">
-                <img src="./images/no_prompt_sft_1.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <img src="./images/good_no_prompt_sft_after_1.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
                 <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
                   <strong>After</strong><br/>
-                  Crocodile
+                  Grasshopper
                 </p>
               </div>
             </div>
@@ -756,6 +756,80 @@
                 <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
                   <strong>After</strong><br/>
                   Spider
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <h4 style="margin-top: 30px; margin-bottom: 15px;">Failure Cases</h4>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">
+          Figure 2 shows examples where the diffusion enhancement fails to improve classification 
+          or introduces artifacts that degrade performance.
+        </p>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+          <!-- Failure Pair 1 -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_before_4.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+                  Turtle<br/>
+                  <span style="color: #999;">CLIP: [PRED] (XX.X%)</span>
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_after_4.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Owl<br/>
+                  <span style="color: #d00;">CLIP: [PRED] (XX.X%)</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Failure Pair 2 -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_before_5.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+                  Snake<br/>
+                  <span style="color: #999;">CLIP: [PRED] (XX.X%)</span>
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_after_5.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Frog<br/>
+                  <span style="color: #d00;">CLIP: [PRED] (XX.X%)</span>
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Failure Pair 3 -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_before_6.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+                  Spider<br/>
+                  <span style="color: #999;">CLIP: [PRED] (XX.X%)</span>
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/fail_no_prompt_sft_after_6.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Moth<br/>
+                  <span style="color: #d00;">CLIP: [PRED] (XX.X%)</span>
                 </p>
               </div>
             </div>
