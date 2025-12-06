@@ -25,7 +25,13 @@ aws s3 cp ddpo_logs/{TIMESTAMP}/checkpoints s3://hectorastrom-dl-final/checkpoin
 * `data/COD_Dataset.py` — builds the dataset object to work with the COD dataset
 * `rl/ddpo.py` — modifies and extends the (deprecated) DDPOTrainer class from HuggingFace TRL to support image inputs and run RL from the 10 denoising steps back we go from that image
 * `rl/reward.py` — defines the reward function (CLIP accuracy)
-* `rl/rl_trainer.py` — runs the RL loop, combining our custom pipeline and the `ImageDDPOTrainer` class from `ddpo.py`
+* `rl/rl_trainer.py` — runs the RL loop, combining our custom pipeline and the
+  `ImageDDPOTrainer` class from `ddpo.py`
+
+**Benchmarking files**
+* `exploration/clip_classifier.py` (Hector) - o.g. used for CLIP only
+* `clip_eval.py` (Kevin) - used for SFT vs. CLIP
+* `rl/eval_rl.py` (Hector) - used for RL vs. CLIP
 
 **Other files (experimentation)**:
 
