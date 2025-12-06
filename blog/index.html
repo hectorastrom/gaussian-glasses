@@ -245,8 +245,8 @@
 		}
 	</style>
 
-	<title>The Platonic Representation Hypothesis</title>
-	<meta property="og:title" content="The Platonic Representation Hypothesis" />
+	<title>Diffusion Lens</title>
+	<meta property="og:title" content="Diffusion Lens" />
 	<meta charset="UTF-8">
 </head>
 
@@ -317,6 +317,7 @@
 			Motivate your project. What question are you asking. Why is it unanswered so far? What gap in the literature
 			or practice are you filling?
 			Why is it important?
+			Introduce both tasks and outline structure of this piece.
 		</div>
 		<div class="margin-right-block">
 			Margin note that clarifies some detail for the introduction section.
@@ -342,8 +343,10 @@
 			<h1>Preliminaries</h1>
 			<h2 id="preliminaries_diffusion">Diffusion (Kevin)</h2>
 			Explain the basics of Diffusion models.
-			<h2 id="preliminaries_ddpo_pg">DDPOTrainer & Policy Gradient methods (Hector)</h2>
-			Explain DDPOTrainer and Policy Gradient fundamentals.
+			<h2 id="preliminaries_ddpo_pg">Policy Gradient Methods (Hector)</h2>
+			Explain Policy Gradient fundamentals.
+			<h2 id="preliminaries_ddpo_pg">DDPOTrainer (Hector)</h2>
+			Explain DDPOTrainer
 		</div>
 		<div class="margin-right-block">
 			Margin note for Preliminaries section.
@@ -354,8 +357,9 @@
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Data Details & Filtering Specifications (Luc)</h1>
-			Details about the dataset used and any filtering applied.
+			<h1>Dataset (Luc)</h1>
+			Details about the dataset used and any filtering applied for both
+			camouflage and CIFAR-C.
 		</div>
 		<div class="margin-right-block">
 			Margin note for Data section.
@@ -369,12 +373,20 @@
 			<h1>Methods</h1>
 			<h2 id="methods_imageddpo">ImageDDPOTrainer (Hector)</h2>
 			Details on the ImageDDPOTrainer.
-			<h2 id="methods_rl_camouflage">RL attempt for camouflage (how) (Hector)</h2>
-			Explain the methodology for the RL camouflage attempt.
-			<h2 id="methods_rl_camouflage">RL attempt for CIFAR-C (how) (Luc)</h2>
-			Explain the methodology for the RL CIFAR-C attempt.
-			<h2 id="methods_sft_camouflage">SFT attempt for camouflage (how) (Kevin)</h2>
-			Explain the methodology for the SFT camouflage attempt.
+			<h2 id="methods_rl_camouflage">RL Methods (universal) (Hector + Luc) </h2>
+			Explain the methodology for the RL attempts. 
+
+			Hector will write about general setup and structure (rl loop, reward
+			function, how ImageDDPOTrainer is used)
+
+			Luc will write about modifications made to original setup for the
+			CIFAR-C task.
+			<h2 id="methods_sft_camouflage">SFT Methods (Kevin)</h2>
+			Explain the methodology for the SFT camouflage attempt. Can just
+			briefly say mention we didn't SFT for CIFAR-C.
+			Thought kevin if this is easy to set up after Luc has the dset it would make sense to do
+			SFT for CIFAR-C as well, as it just makes our paper and results very
+			easy to follow. 
 			<h2 id="methods_benchmarking">Benchmarking Procedure (Kevin)</h2>
 			Details what we compared (CLIP vs. CLIP + Diffusion RL vs. CLIP +
 			Diffusion SFT)
@@ -389,14 +401,14 @@
 		</div>
 		<div class="main-content-block">
 			<h1>Results</h1>
-			<h2 id="results_sft">SFT (Kevin)</h2>
-			Present results for SFT.
-			<h2 id="results_rl_camouflage">RL Camouflage</h2>
-			Present results for RL Camouflage.
-			<h2 id="results_rl_cifar">RL CIFAR-C (Luc)</h2>
-			Present results for RL CIFAR-C.
-			<h2 id="results_ddpo">DDPO (Hector)</h2>
-			Present results for DDPO.
+			TOP 1, TOP 3, and TOP 5 accuracy table for:
+			
+			<h2>Camouflage Task (Kevin)</h2>
+			CLIP vs. CLIP+DIFFUSION RL vs. CLIP+DIFFUSION SFT
+			(Hector will send benchmarks on new dset for RL)
+
+			<h2>CIFAR-C Task (Luc or Hector - whoever trains)</h2>
+			Comparing clip vs. clip+diffusion RL for CIFAR-C 
 		</div>
 		<div class="margin-right-block">
 			A caption for the results could go here.
