@@ -24,7 +24,7 @@ from diffusers import StableDiffusionImg2ImgPipeline
 from transformers import CLIPModel, CLIPTokenizerFast
 from peft import PeftModel
 
-from COD_dataset import build_COD_torch_dataset
+from data.COD_dataset import build_COD_torch_dataset
 
 
 def parse_args():

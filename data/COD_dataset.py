@@ -7,14 +7,14 @@ import os
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from datasets import Dataset, DatasetDict, Features, Image as ImageFeature, ClassLabel, Value
-from reward import CLIPReward
+from rl.reward import CLIPReward
 
 ##################################
 # Dataset Reading
 ##################################
-# [SCRIPT_DIR]/datasets/COD10K
+# [SCRIPT_DIR]/COD10K
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) 
-DATASET_ROOT = os.path.join(SCRIPT_DIR, "datasets", "COD10K")
+DATASET_ROOT = os.path.join(SCRIPT_DIR, "COD10K")
 
 SPLITS = ["Train", "Test"]
 # SubClass is located at index 5 in the filename split.

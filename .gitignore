@@ -5,9 +5,11 @@ build/
 dist/
 wheels/
 *.egg-info
-datasets/*
-!datasets/README.md
-outputs/*
+data/*
+!data/COD_dataset.py
+!data/README.md
+!data/__init__.py
+exploration/outputs/*
 wandb
 ddpo_logs
 gradient_logs

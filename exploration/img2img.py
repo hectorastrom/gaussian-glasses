@@ -13,11 +13,12 @@ pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
     torch_dtype=torch.float16
 ).to(device)
 
-# input_image_path = "outputs/output_text2img.png"
-# datasets/COD10K/Train/Image/COD10K-CAM-1-Aquatic-1-BatFish-1.jpg
+default_img_path = "exploration/outputs/output_text2img.png"
+# default_img_path = "exploration/outputs/test_lizard.png"
+# data/COD10K/Train/Image/COD10K-CAM-1-Aquatic-1-BatFish-1.jpg
 input_image_path = input("Input image (enter for default): ")
 if not input_image_path:
-    input_image_path = "outputs/test_lizard.png"
+    input_image_path = default_img_path
 init_image = load_image(input_image_path).convert("RGB")
 
 init_image = init_image.resize((512, 512))
@@ -49,4 +50,4 @@ image = pipe(
 to_tensor = transforms.ToTensor()
 tensor_img = to_tensor(image)
 
-image.save(f"outputs/output_img2img_{strength}_{guidance}.png")
+image.save(f"exploration/outputs/output_img2img_{strength}_{guidance}.png")

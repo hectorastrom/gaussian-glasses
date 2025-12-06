@@ -5,7 +5,7 @@
 """
 Goal: Evaluate the performance of the diffusion + CLIP combo on the COD dataset.
 """
-from COD_dataset import build_COD_torch_dataset
+from data.COD_dataset import build_COD_torch_dataset
 from diffusers import StableDiffusionImg2ImgPipeline
 from transformers import CLIPModel, CLIPTokenizerFast
 import torch

@@ -39,7 +39,7 @@ from peft import LoraConfig, get_peft_model
 from tqdm import tqdm
 import wandb
 
-from COD_dataset import build_COD_torch_dataset
+from data.COD_dataset import build_COD_torch_dataset
 
 
 # ==========================================

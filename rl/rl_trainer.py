@@ -2,7 +2,7 @@
 # @Author  : Hector Astrom
 # @Email   : hastrom@mit.edu
 # @File    : rl_trainer.py
-# Run with `accelerate launch rl_trainer.py`
+# Run with `accelerate launch -m rl.rl_trainer`
 
 """
 Goal: Teach a diffusion model to perceptually enhance images of camouflaged
@@ -14,11 +14,11 @@ Output from RL: r(x) = score from CLIP on class "An image of {label}" out of all
 possible labels
 """
 
+from rl.reward import CLIPReward
+from rl.ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
+from data.COD_dataset import build_COD_torch_dataset
 
 from trl import DDPOConfig
-from ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
-from reward import CLIPReward
-from COD_dataset import build_COD_torch_dataset
 from torch.utils.data import DataLoader, Subset
 import numpy as np
 import os

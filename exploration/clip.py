@@ -15,7 +15,7 @@ print("Selecting from a predefined set of labels...")
 # of a landscape", "a photo of a coffee cup"]
 labels = ['idk', 'I do know']
 
-img_name = "outputs/output_img2img.png"
+img_name = "exploration/outputs/output_img2img.png"
 source_img = Image.open(img_name)
 # sorted by score list of dict [{'score': float, 'label': str}, ...] for all labels
 likelihoods = clip(source_img, labels) 

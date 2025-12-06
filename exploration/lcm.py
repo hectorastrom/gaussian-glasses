@@ -24,4 +24,4 @@ image = pipe(
     guidance_scale=8.0
 ).images[0]
 
-image.save("outputs/output_lcm.png")
+image.save("exploration/outputs/output_lcm.png")

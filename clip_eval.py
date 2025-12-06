@@ -4,7 +4,7 @@ from collections import defaultdict
 from transformers import CLIPModel, CLIPTokenizerFast
 import torch.nn.functional as F
 from PIL import Image
-from COD_dataset import load_cod10k_lazy
+from data.COD_dataset import load_cod10k_lazy
 from diffusers import StableDiffusionImg2ImgPipeline
 from torchvision import transforms
 import math
