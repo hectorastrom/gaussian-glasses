@@ -122,14 +122,14 @@
 
 		h1 {
 			font-size: 24px;
-			margin-top: 4px;
-			margin-bottom: 10px;
+			margin-top: 32px;
+			margin-bottom: 8px;
 		}
 
 		h2 {
 			font-size: 18px;
-			margin-top: 8px;
-			margin-bottom: 8px;
+			margin-top: 12px;
+			margin-bottom: 6px;
 		}
 
 		table.header {
@@ -292,12 +292,11 @@
 			<div style="position:fixed; max-width:inherit; top:max(20%,120px)">
 				<b style="font-size:16px">Outline</b><br><br>
 				<a href="#intro">Introduction</a><br><br>
-				<a href="#related_work">Related Work</a><br><br>
 				<a href="#preliminaries">Preliminaries</a><br><br>
-				<a href="#data_details">Data Details</a><br><br>
+				<a href="#task_data">Task and Data Description</a><br><br>
 				<a href="#methods">Methods</a><br><br>
 				<a href="#results">Results</a><br><br>
-				<a href="#discussion_conclusion">Discussion / Conclusion</a><br><br>
+				<a href="#discussion">Discussion</a><br><br>
 				<a href="#citations">References</a><br><br>
 			</div>
 		</div>
@@ -314,6 +313,9 @@
 		</div>
 		<div class="main-content-block">
 			<h1>Introduction (Hector)</h1>
+			Diffusion probabilistic models <a href="#ref_1">[1]</a> have recently emerged as the de facto standard for
+			generative modeling in continuous domains.
+
 			Motivate your project. What question are you asking. Why is it unanswered so far? What gap in the literature
 			or practice are you filling?
 			Why is it important?
@@ -324,28 +326,17 @@
 		</div>
 	</div>
 
-	<div class="content-margin-container" id="related_work">
-		<div class="margin-left-block">
-		</div>
-		<div class="main-content-block">
-			<h1>Related Work (Hector)</h1>
-			Discuss relevant literature here.
-		</div>
-		<div class="margin-right-block">
-			Margin note for Related Work.
-		</div>
-	</div>
-
 	<div class="content-margin-container" id="preliminaries">
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Preliminaries</h1>
+			<h1>Preliminaries (Kevin + Hector)</h1>
+			<!-- NOTE: Merging related work into this section; just cite a lot -->
 			<h2 id="preliminaries_diffusion">Diffusion (Kevin)</h2>
 			Explain the basics of Diffusion models.
-			<h2 id="preliminaries_ddpo_pg">Policy Gradient Methods (Hector)</h2>
+			<h2 id="preliminaries_pg">Policy Gradient Methods (Hector)</h2>
 			Explain Policy Gradient fundamentals.
-			<h2 id="preliminaries_ddpo_pg">DDPOTrainer (Hector)</h2>
+			<h2 id="preliminaries_ddpo">DDPOTrainer (Hector)</h2>
 			Explain DDPOTrainer
 		</div>
 		<div class="margin-right-block">
@@ -353,13 +344,23 @@
 		</div>
 	</div>
 
-	<div class="content-margin-container" id="data_details">
+	<div class="content-margin-container" id="task_data">
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Dataset (Luc)</h1>
-			Details about the dataset used and any filtering applied for both
-			camouflage and CIFAR-C.
+			<h1>Task and Dataset Details (Luc)</h1>
+			Details about tasks & motivations 
+			(hector will already do some of this in intro, but doesn't hurt to
+			remind / go into more detail)
+
+			for camouflauge, you could say interpretability
+
+			for cifar, you could say leveraging the denoising capabilities of
+			diffusion models to better handle corruptions (something abt how
+			they're better for it)
+
+			then details about the datasets used, any filtering applied, and how
+			we gained access (citations)
 		</div>
 		<div class="margin-right-block">
 			Margin note for Data section.
@@ -370,10 +371,11 @@
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Methods</h1>
+			<h1>Methods (All)</h1>
 			<h2 id="methods_imageddpo">ImageDDPOTrainer (Hector)</h2>
-			Details on the ImageDDPOTrainer.
-			<h2 id="methods_rl_camouflage">RL Methods (universal) (Hector + Luc) </h2>
+			Details on the ImageDDPOTrainer; what was required to implement it;
+			where it can be accessed and adapted for different tasks
+			<h2 id="methods_rl">RL Methods (universal) (Hector + Luc) </h2>
 			Explain the methodology for the RL attempts. 
 
 			Hector will write about general setup and structure (rl loop, reward
@@ -381,15 +383,21 @@
 
 			Luc will write about modifications made to original setup for the
 			CIFAR-C task.
-			<h2 id="methods_sft_camouflage">SFT Methods (Kevin)</h2>
+			<h2 id="methods_sft">SFT Methods (Kevin)</h2>
 			Explain the methodology for the SFT camouflage attempt. Can just
-			briefly say mention we didn't SFT for CIFAR-C.
-			Thought kevin if this is easy to set up after Luc has the dset it would make sense to do
+			briefly say mention we didn't SFT for CIFAR-C (or even better: do
+			run SFT for CIFAR-C!)
+
+			Though kevin if this is easy to set up after Luc has the dset it would make sense to do
 			SFT for CIFAR-C as well, as it just makes our paper and results very
 			easy to follow. 
 			<h2 id="methods_benchmarking">Benchmarking Procedure (Kevin)</h2>
 			Details what we compared (CLIP vs. CLIP + Diffusion RL vs. CLIP +
 			Diffusion SFT)
+
+			hector used eval_rl script for this, but not sure what you used
+			kevin. just point to that script and basics of how it is setup & any
+			special changes for each test.
 		</div>
 		<div class="margin-right-block">
 			Margin note for Methods section.
@@ -400,7 +408,7 @@
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Results</h1>
+			<h1>Results (All)</h1>
 			TOP 1, TOP 3, and TOP 5 accuracy table for:
 			
 			<h2>Camouflage Task (Kevin)</h2>
@@ -415,11 +423,11 @@
 		</div>
 	</div>
 
-	<div class="content-margin-container" id="discussion_conclusion">
+	<div class="content-margin-container" id="discussion">
 		<div class="margin-left-block">
 		</div>
 		<div class="main-content-block">
-			<h1>Discussion / Conclusion (Kevin)</h1>
+			<h1>Discussion (Kevin)</h1>
 			Let's end with some discussion of the implications and limitations.
 		</div>
 		<div class="margin-right-block">
