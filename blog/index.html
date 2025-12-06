@@ -642,8 +642,132 @@
         TOP 1, TOP 3, and TOP 5 accuracy table for:
 
         <h2>Camouflage Task (Kevin)</h2>
-        CLIP vs. CLIP+DIFFUSION RL vs. CLIP+DIFFUSION SFT (Hector will send
-        benchmarks on new dset for RL)
+        <p>
+          Table 1 shows classification accuracy results on the COD10K test set across 
+          four experimental conditions: CLIP baseline, BASE SD + CLIP, RL-trained SD + CLIP, 
+          and SFT-trained SD + CLIP.
+        </p>
+        
+        <table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+          <thead>
+            <tr style="border-bottom: 2px solid #333;">
+              <th style="padding: 10px; text-align: left;">Method</th>
+              <th style="padding: 10px; text-align: center;">Top-1 Accuracy</th>
+              <th style="padding: 10px; text-align: center;">Top-3 Accuracy</th>
+              <th style="padding: 10px; text-align: center;">Top-5 Accuracy</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid #ddd;">
+              <td style="padding: 10px;"><strong>CLIP Baseline</strong></td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ddd;">
+              <td style="padding: 10px;"><strong>BASE SD + CLIP</strong></td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #ddd;">
+              <td style="padding: 10px;"><strong>RL-Trained SD + CLIP</strong></td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px;"><strong>SFT-Trained SD + CLIP</strong></td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+              <td style="padding: 10px; text-align: center;">XX.X%</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <p>
+          [Add brief analysis here: e.g., "Both RL and SFT training improve classification 
+          accuracy over the CLIP baseline, with SFT achieving XX.X% top-1 accuracy compared 
+          to XX.X% for CLIP alone. The BASE SD baseline shows that even untrained diffusion 
+          processing provides some benefit, suggesting the denoising process has an inherent 
+          regularizing effect."]
+        </p>
+        
+        <h3>Example Results</h3>
+        <p>
+          Figure 1 shows example images demonstrating the effect of diffusion-based enhancement 
+          on camouflaged object classification. Each pair shows the original image (left) and 
+          the same image after processing through the SFT-trained diffusion model (right).
+        </p>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+          <!-- Pair 1 -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/original_1.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+                  Crocodile
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/no_prompt_sft_1.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Crocodile
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Pair 2 -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/original_2.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+                  Frog
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/no_prompt_sft_2.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Frog
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Pair 3 (template) -->
+          <div style="flex: 0 0 auto; width: 280px;">
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1;">
+                <img src="./images/original_3.png" alt="Before: Original camouflaged image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>Before</strong><br/>
+				  Spider
+                </p>
+              </div>
+              <div style="flex: 1;">
+                <img src="./images/no_prompt_sft_3.png" alt="After: Enhanced image" style="width: 100%; border: 1px solid #ddd;" />
+                <p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+                  <strong>After</strong><br/>
+                  Spider
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <p style="font-size: 0.9em; color: #666; font-style: italic; margin-top: 10px;">
+          [Optional: Add more example pairs or a note about what visual changes the diffusion 
+          model makes, e.g., "The diffusion model enhances edge features and increases contrast 
+          in regions where the camouflaged object blends with the background."]
+        </p>
+		
 
         <h2>CIFAR-C Task (Luc or Hector - whoever trains)</h2>
         Comparing clip vs. clip+diffusion RL for CIFAR-C
