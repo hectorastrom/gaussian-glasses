@@ -274,9 +274,8 @@
             </td>
             <td align="left">
               <span style="font-size: 17px"
-                ><a href="your_partner's_website"
-                  >Kevin Zhu ADD YOUR LINK</a
-                ></span
+                ><a href="https://kevinzhu.com">Kevin Zhu</a>
+                </span
               >
             </td>
             <td align="left">
@@ -459,7 +458,7 @@
     <div class="content-margin-container" id="methods">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Methods (All)</h1>
+        <h1>Methods</h1>
         <h2 id="methods_imageddpo">ImageDDPOTrainer (Hector)</h2>
         Details on the ImageDDPOTrainer; what was required to implement it;
         where it can be accessed and adapted for different tasks
@@ -468,17 +467,171 @@
         general setup and structure (rl loop, reward function, how
         ImageDDPOTrainer is used) Luc will write about modifications made to
         original setup for the CIFAR-C task.
-        <h2 id="methods_sft">SFT Methods (Kevin)</h2>
-        Explain the methodology for the SFT camouflage attempt. Can just briefly
-        say mention we didn't SFT for CIFAR-C (or even better: do run SFT for
-        CIFAR-C!) Though kevin if this is easy to set up after Luc has the dset
-        it would make sense to do SFT for CIFAR-C as well, as it just makes our
-        paper and results very easy to follow.
-        <h2 id="methods_benchmarking">Benchmarking Procedure (Kevin)</h2>
-        Details what we compared (CLIP vs. CLIP + Diffusion RL vs. CLIP +
-        Diffusion SFT) hector used eval_rl script for this, but not sure what
-        you used kevin. just point to that script and basics of how it is setup
-        & any special changes for each test.
+		<h2 id="methods_sft">Supervised Fine-Tuning (Kevin)</h2>
+		<b>Explain the methodology for the SFT camouflage attempt. Can just briefly
+			say mention we didn't SFT for CIFAR-C (or even better: do run SFT for
+			CIFAR-C!) Though kevin if this is easy to set up after Luc has the dset
+			it would make sense to do SFT for CIFAR-C as well, as it just makes our
+			paper and results very easy to follow.</b>
+			<p>
+			In contrast to the reinforcement learning approach described above, we also 
+			explore a supervised fine-tuning (SFT) method that directly backpropagates 
+			gradients through the entire diffusion pipeline. This approach eliminates the 
+			variance inherent in policy gradient methods by computing exact gradients 
+			through the differentiable components of the system.
+			</p>
+
+			<p>
+			Our SFT method trains a LoRA adapter on the UNet component of Stable Diffusion 
+			v1.5 to optimize CLIP classification accuracy. The key insight is that the 
+			entire pipeline—from the UNet's denoising predictions through the VAE decoder 
+			to the frozen CLIP classifier—is differentiable, allowing us to compute 
+			gradients directly with respect to the classification loss.
+			</p>
+
+			<h3>Architecture and Pipeline</h3>
+			<p>
+			The training pipeline follows this forward pass:
+			</p>
+			<p style="margin-left: 20px;">
+			<em>Image → VAE Encode → Add Noise → UNet (LoRA) → Denoise → VAE Decode → CLIP → Classification Loss</em>
+			</p>
+
+			<p>
+			We freeze all components except the LoRA parameters applied to the UNet's 
+			attention layers. Specifically, LoRA adapters are applied to the query, key, 
+			value, and output projection matrices (<code>to_q</code>, <code>to_k</code>, 
+			<code>to_v</code>, <code>to_out.0</code>) in all cross-attention and 
+			self-attention blocks. We use a LoRA rank of 4 and alpha of 4, resulting in 
+			only a small fraction of the UNet's parameters being trainable (less than 1% of the full model). The VAE encoder and decoder, text encoder, 
+			and CLIP classifier are all frozen, ensuring that gradients flow only through 
+			the LoRA-adapted UNet.
+			</p>
+
+			<h3>Differentiable Denoising Loop</h3>
+			<p>
+			The core of our approach is a fully differentiable denoising loop implemented 
+			using DDIM sampling with <em>η = 0</em> (deterministic mode). This ensures 
+			that the reverse diffusion process is deterministic and maintains gradient 
+			flow throughout all denoising steps. For each training sample:
+			</p>
+
+			<ol>
+			<li>
+				<strong>VAE Encoding:</strong> The input image is encoded into the latent 
+				space using the frozen VAE encoder, producing latents <em>z₀</em>.
+			</li>
+			<li>
+				<strong>Noise Injection:</strong> We apply image-to-image (I2I) conditioning 
+				by adding noise to the latents. Given a noise strength parameter 
+				<em>α</em> (typically 0.4), we select a timestep <em>t<sub>start</sub></em> 
+				corresponding to the <em>(1 - α)</em> quantile of the diffusion schedule, 
+				then add noise: <em>z<sub>t_start</sub> = √(1-β<sub>t</sub>) z₀ + √β<sub>t</sub> ε</em>, 
+				where <em>ε ~ N(0, I)</em>.
+			</li>
+			<li>
+				<strong>Differentiable Denoising:</strong> Starting from <em>z<sub>t_start</sub></em>, 
+				we run a deterministic DDIM denoising loop for the remaining 
+				<em>α × num_steps</em> steps. At each timestep <em>t</em>, the UNet 
+				predicts noise <em>ε<sub>θ</sub>(z<sub>t</sub>, c, t)</em>, where <em>c</em> 
+				is the text conditioning. We optionally apply classifier-free guidance (CFG) 
+				by computing both unconditional and conditional predictions and combining 
+				them: <em>ε<sub>pred</sub> = ε<sub>uncond</sub> + γ(ε<sub>cond</sub> - ε<sub>uncond</sub>)</em>, 
+				where <em>γ</em> is the guidance scale. The DDIM step update is:
+			</li>
+			</ol>
+
+			<p style="margin-left: 40px;">
+			<em>z<sub>t-1</sub> = √(α<sub>t-1</sub>/α<sub>t</sub>) z<sub>t</sub> + 
+			(√(1-α<sub>t-1</sub>) - √(α<sub>t-1</sub>/α<sub>t</sub>)√(1-α<sub>t</sub>)) ε<sub>pred</sub></em>
+			</p>
+
+			<p>
+			All operations in this loop maintain gradient flow, allowing 
+			backpropagation through the entire sequence of denoising steps.
+			</p>
+
+			<h3>Classification Loss and Training</h3>
+			<p>
+			After denoising, the latents are decoded back to pixel space using the frozen 
+			VAE decoder, producing generated images <em>x̂</em>. These images are then 
+			preprocessed for CLIP (resized to 224×224 and normalized using CLIP's 
+			statistics) and passed through the frozen CLIP vision encoder to obtain 
+			normalized image features <em>f<sub>img</sub></em>.
+			</p>
+
+			<p>
+			We pre-compute normalized text embeddings <em>f<sub>text</sub><sup>(i)</sup></em> 
+			for all classes in the dataset using prompts "An image of {class_name}" for each class. 
+			Classification logits are computed as:
+			</p>
+
+			<p style="margin-left: 20px;">
+			<em>logits<sub>i</sub> = exp(τ) × (f<sub>img</sub> · f<sub>text</sub><sup>(i)</sup>)</em>
+			</p>
+
+			<p>
+			where <em>τ</em> is CLIP's learned temperature parameter. We minimize the 
+			cross-entropy loss between these logits and the ground-truth class labels 
+			using standard backpropagation.
+			</p>
+
+			<h3>Training Details</h3>
+			<p>
+			Training uses mixed precision (FP16 for diffusion components, FP32 for CLIP) 
+			and gradient accumulation to achieve an effective batch size of 16 (batch 
+			size 2 × 8 accumulation steps). We use the AdamW optimizer with a learning 
+			rate of 1e-4. The diffusion process uses 20 total steps with a noise strength 
+			of 0.4, meaning we denoise only the final 40% of the diffusion schedule. 
+			This I2I approach allows the model to make targeted modifications to the 
+			input image while preserving its overall structure.
+			</p>
+
+			<p>
+			We experiment with different prompt strategies: (1) <strong>ORACLE</strong> mode, 
+			where prompts use the ground-truth class label (e.g., "A clear photo of {class}"), 
+			(2) custom fixed prompts, and (3) empty prompts. The ORACLE setting provides 
+			an upper bound on performance by giving the model perfect semantic information, 
+			while empty prompts test whether the model can learn to improve classification 
+			without explicit text guidance.
+			</p>
+
+			<p>
+			<strong>Note:</strong> We apply SFT only to the camouflage task (COD10K dataset). 
+			While the methodology is directly applicable to CIFAR-C, we focus our SFT 
+			experiments on the camouflage domain where the image-to-image nature of the 
+			task aligns naturally with the I2I diffusion approach.
+			</p>
+		<h2 id="methods_benchmarking">Evaluation (Kevin)</h2>
+		<b>Details what we compared (CLIP vs. CLIP + Diffusion RL vs. CLIP +
+			Diffusion SFT) hector used eval_rl script for this, but not sure what
+			you used kevin. just point to that script and basics of how it is setup
+			& any special changes for each test.</b>
+<p>
+  To evaluate the effectiveness of our diffusion-enhanced classification approach, we compare four conditions on the COD10K test set. 
+  We establish two baselines: direct zero-shot classification of original images using CLIP without diffusion processing, and classification 
+  of images processed through the base (untrained) Stable Diffusion model. We then evaluate our trained models: RL-trained SD and SFT-trained SD, 
+  both fine-tuned for the camouflage classification task.
+</p>
+
+<h3>Setup</h3>
+<p>
+  All evaluations use the same CLIP model (<code>openai/clip-vit-base-patch16</code>) 
+  and preprocessing pipeline to ensure fair comparison. Images are resized to 
+  224×224 using bicubic interpolation and normalized using CLIP's standard 
+  statistics (mean: [0.4815, 0.4578, 0.4082], std: [0.2686, 0.2613, 0.2758]). 
+  We pre-compute normalized text embeddings for all classes using prompts of the 
+  form "An image of {class_name}" and compute classification logits using CLIP's 
+  learned temperature-scaled cosine similarity.
+</p>
+
+<p>
+  For each condition, we report top-1 through top-5 classification accuracy, 
+  mean negative log-likelihood (NLL), and mean probability assigned to the 
+  correct class. These metrics are computed across the entire test set and 
+  optionally broken down by class for per-class analysis.
+</p>
+
       </div>
       <div class="margin-right-block">Margin note for Methods section.</div>
     </div>
@@ -504,8 +657,42 @@
     <div class="content-margin-container" id="discussion">
       <div class="margin-left-block"></div>
       <div class="main-content-block">
-        <h1>Discussion (Kevin)</h1>
-        Let's end with some discussion of the implications and limitations.
+		<h1>Discussion</h1>
+		<p>
+			This work demonstrates that generative priors can meaningfully improve 
+  classification where discriminative models alone struggle. The "diffusion lens" 
+  idea of using learned diffusion transformations to enhance images for machine 
+  perception suggests foundation models can be composed as complementary modules 
+  for specific downstream tasks. LoRA adaptation makes this practical, requiring 
+  only a small number of trainable parameters to specialize the diffusion model.
+		</p>
+
+		<h2>Limitations</h2>
+		<p>
+		  There are some limitations to this work. First, using a diffusion 
+		  model as a preprocessing step adds substantial latency compared to direct 
+		  classification. Even with only 10-20 denoising steps, inference is 
+		  significantly slower than CLIP alone, limiting deployment in certain 
+		  applications. Second, our experiments focus on COD10K (~6,000 training images), 
+		  and effectiveness on larger-scale tasks with hundreds of classes remains to be 
+		  validated. Third, the LoRA adapters are trained specifically for camouflage 
+		  detection, so generalization to other domains (medical imaging, satellite 
+		  imagery) would require separate fine-tuning. Finally, the I2I process modifies 
+		  input images, potentially introducing artifacts. The noise strength 
+		  hyperparameter controls the enhancement-distortion tradeoff, requiring careful 
+		  tuning for each application.
+		</p>
+		
+		<h2>Conclusion and Future Work</h2>
+		<p>
+		  We have presented two approaches: 1) RL via DDPO and 2) supervised fine-tuning via 
+		  direct gradient descent for training Stable Diffusion to enhance images for 
+		  CLIP classification on challenging visual domains. Both approaches improve 
+		  classification accuracy on camouflaged objects, demonstrating that generative 
+		  models can serve as effective "lenses" that reveal features hidden from discriminative models. Future work could explore distilling the diffusion 
+		  model into a lightweight network to reduce inference latency, using iterative 
+		  refinement with predicted labels as prompts, analyzing what visual changes the model makes for interpretability, and evaluating whether improvements persist with larger CLIP variants or more capable diffusion models. We hope this work encourages further exploration of generative-discriminative model composition for challenging perception tasks.
+		</p> 
       </div>
       <div class="margin-right-block"></div>
     </div>
