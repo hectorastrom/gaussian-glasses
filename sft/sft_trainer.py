@@ -8,6 +8,10 @@ Instead of RL (DDPO), we directly backprop through:
     LoRA UNet → Diffusion → VAE Decode → Frozen CLIP → Classification Loss
 
 This gives us exact gradients (lower variance than policy gradients).
+
+Usage: 
+python sft_trainer.py --epochs 30 --batch_size 2 --overfit_size 0 --num_steps 10 --guidance_scale 1.0 --prompt ORACLE
+
 """
 
 import os
