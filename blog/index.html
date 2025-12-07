@@ -332,7 +332,7 @@
 			<h2 id="preliminaries_diffusion">Diffusion (Kevin)</h2>
 			<p>
 				In this work, we adopt conditional diffusion probabilistic models
-				(Sohl-Dickstein et al., 2015; Ho et al., 2020), which define a distribution
+				<a href="#ref_1">[1]</a> <a href="#ref_2">[2]</a>, which define a distribution
 				\( p(x_0 | c) \) over data samples \( x_0 \) given an associated context \( c \).
 				These models operate by introducing a forward noising process
 				\( q(x_t | x_{t-1}) \), a Markov chain that incrementally corrupts the data with noise across many
@@ -361,7 +361,7 @@
 				At sampling time, generation begins from Gaussian noise \( x_T \sim \mathcal{N}(0, I) \). The model then
 				iteratively applies the learned reverse transitions
 				\( p_\theta(x_{t-1} | x_t, c) \), gradually removing noise and steering the sample
-				toward the data distribution. Most widely used samplers (Ho et al., 2020; Song et al., 2021) implement
+				toward the data distribution. Most widely used samplers <a href="#ref_2">[2]</a> <a href="#ref_4">[4]</a> implement
 				this reverse update as an isotropic Gaussian with a timestep-dependent variance:
 			</p>
 
@@ -426,7 +426,7 @@
 
 			<p>
 				Our SFT method trains a LoRA adapter on the UNet component of Stable Diffusion
-				v1.5 to optimize CLIP classification accuracy. The key insight is that the
+				<a href="#ref_3">[3]</a> to optimize CLIP <a href="#ref_5">[5]</a> classification accuracy. The key insight is that the
 				entire pipeline (from the UNet's denoising predictions through the VAE decoder
 				to the frozen CLIP classifier) is differentiable, allowing us to compute
 				gradients directly with respect to the classification loss.
@@ -439,8 +439,7 @@
 
 			$$
 			\begin{gathered}
-			\text{Image} \to \text{VAE Encode} \to \text{Add Noise} \to \text{UNet (LoRA)} \to \\
-		 	\\
+			\text{Image} \to \text{VAE Encode} \to \text{Add Noise} \to \text{UNet (LoRA)}
 			\to \text{Denoise} \to \text{VAE Decode} \to \text{CLIP} \to \text{Classification Loss}
 			\end{gathered}
 			$$
@@ -543,7 +542,7 @@
 			</p>
 
 			<p>
-				For the custom fixed prompts, we try the following prompts:
+				For the custom fixed prompts, we use the following prompts:
 			<ul>
 				<li>"De-camouflage the animal" — a direct semantic instruction to remove camouflage effects, testing
 					whether explicit task guidance helps preserve the correct object.</li>
@@ -590,10 +589,9 @@
 	<div class="content-margin-container" id="results">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h1>Results (All)</h1>
-			TOP 1, TOP 3, and TOP 5 accuracy table for:
+			<h1>Results</h1>
 
-			<h2>Camouflage Task (Kevin)</h2>
+			<h2>Camouflage Task</h2>
 			<p>
 				Table 1 shows classification accuracy results on the COD10K test set across
 				four experimental conditions: CLIP baseline, BASE SD + CLIP, RL-trained SD + CLIP,
@@ -833,7 +831,82 @@
 				custom prompts ("De-camouflage the animal", "Increase edge sharpness and contrast",
 				"Enhance visibility of camouflaged animal") versus the no-prompt baseline. Despite
 				the semantic differences in prompt wording, all custom prompts performed similarly to
-				each other and showed no meaningful improvement over the no-prompt condition.
+				each other and showed no meaningful improvement over the no-prompt condition.		
+			</p>
+
+			
+			<div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+				<!-- Pair 1 -->
+				<div style="flex: 0 0 auto; width: 280px;">
+					<div style="display: flex; gap: 8px;">
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_before_1.png" alt="Before: Original camouflaged image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>Before</strong><br />
+								Cat
+							</p>
+						</div>
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_after_1.png" alt="After: Enhanced image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>After</strong><br />
+								Cat
+							</p>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Pair 2 -->
+				<div style="flex: 0 0 auto; width: 280px;">
+					<div style="display: flex; gap: 8px;">
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_before_2.png" alt="Before: Original camouflaged image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>Before</strong><br />
+								Frog
+							</p>
+						</div>
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_after_2.png" alt="After: Enhanced image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>After</strong><br />
+								Frog
+							</p>
+						</div>
+					</div>
+				</div>
+				
+				<!-- Pair 3 -->
+				<div style="flex: 0 0 auto; width: 280px;">
+					<div style="display: flex; gap: 8px;">
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_before_3.png" alt="Before: Original camouflaged image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>Before</strong><br />
+								Mantis
+							</p>
+						</div>
+						<div style="flex: 1;">
+							<img src="./images/oracle_prompt_after_3.png" alt="After: Enhanced image"
+								style="width: 100%; border: 1px solid #ddd;" />
+							<p style="text-align: center; font-size: 0.85em; margin-top: 5px; color: #666;">
+								<strong>After</strong><br />
+								Mantis
+							</p>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<p>
+				As 
+				expected, the ORACLE prompt performed the best, but the generated images are clearly not the original image 
+				and simply generates the class image. We hope you enjoy these examples!
 			</p>
 
 			<h4>RL-Trained Model Results</h4>
@@ -986,7 +1059,7 @@
 			Comparing clip vs. clip+diffusion RL for CIFAR-C
 		</div>
 		<div class="margin-right-block">
-			A caption for the results could go here.
+			Figure 3
 		</div>
 	</div>
 
@@ -1041,11 +1114,24 @@
 			<div class="citation" id="references" style="height: auto">
 				<br />
 				<span style="font-size: 16px">References:</span><br /><br />
-				<a id="ref_1"></a>[1]
-				<a href="https://en.wikipedia.org/wiki/Allegory_of_the_cave">Allegory of the Cave</a>, Plato, c. 375
-				BC<br /><br />
-				<a id="ref_2"></a>[2] <a href="">A Human-Level AGI</a>, OpenAI,
-				2025<br /><br />
+				<a id="ref_1"></a>[1] Sohl-Dickstein, J., Weiss, E., Maheswaranathan, N., & Ganguli, S. (2015). 
+				<a href="https://arxiv.org/abs/1503.03585">Deep Unsupervised Learning using Nonequilibrium Thermodynamics</a>. 
+				ICML 2015.<br /><br />
+				<a id="ref_2"></a>[2] Ho, J., Jain, A., & Abbeel, P. (2020). 
+				<a href="https://arxiv.org/abs/2006.11239">Denoising Diffusion Probabilistic Models</a>. 
+				NeurIPS 2020.<br /><br />
+				<a id="ref_3"></a>[3] Rombach, R., Blattmann, A., Lorenz, D., Esser, P., & Ommer, B. (2022). 
+				<a href="https://arxiv.org/abs/2112.10752">High-Resolution Image Synthesis with Latent Diffusion Models</a>. 
+				CVPR 2022.<br /><br />
+				<a id="ref_4"></a>[4] Song, J., Meng, C., & Ermon, S. (2021). 
+				<a href="https://arxiv.org/abs/2010.02502">Denoising Diffusion Implicit Models</a>. 
+				ICLR 2021.<br /><br />
+				<a id="ref_5"></a>[5] Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G., Agarwal, S., ... & Sutskever, I. (2021). 
+				<a href="https://arxiv.org/abs/2103.00020">Learning Transferable Visual Models From Natural Language Supervision</a>. 
+				ICML 2021.<br /><br />
+				<a id="ref_6"></a>[6] Black, K., Janner, M., Du, Y., Kostrikov, I., & Levine, S. (2023). 
+				<a href="https://arxiv.org/abs/2305.13301">Training Diffusion Models with Reinforcement Learning</a>. 
+				NeurIPS 2023.<br /><br />
 			</div>
 		</div>
 		<div class="margin-right-block"></div>
