@@ -12,9 +12,9 @@ from rl.reward import CLIPReward
 ##################################
 # Dataset Reading
 ##################################
-# [SCRIPT_DIR]/COD10K
+# [PROJECT_ROOT]/datasets/COD10K
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) 
-DATASET_ROOT = os.path.join(SCRIPT_DIR, "COD10K")
+DATASET_ROOT = os.path.join(os.path.dirname(SCRIPT_DIR), "datasets", "COD10K")
 
 SPLITS = ["Train", "Test"]
 # SubClass is located at index 5 in the filename split.

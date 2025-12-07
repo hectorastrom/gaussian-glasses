@@ -1,3 +1,9 @@
+"""
+Usage:
+python clip_eval.py --eval_type original  # Evaluate on original images
+python clip_eval.py --eval_type sd_baseline  # Evaluate on SD-processed images
+"""
+
 import torch
 import numpy as np
 from collections import defaultdict
@@ -10,6 +16,7 @@ from torchvision import transforms
 import math
 import json
 import os
+import argparse
 from tqdm import tqdm
 
 def eval(dataset_split, label_names, clip_model, clip_tokenizer, num_samples=None):
@@ -296,6 +303,16 @@ def eval_with_sd_baseline(
     return results
 
 def main():
+    parser = argparse.ArgumentParser(description='CLIP evaluation on COD10K dataset')
+    parser.add_argument(
+        '--eval_type',
+        type=str,
+        choices=['original', 'sd_baseline'],
+        default='original',
+        help='Type of evaluation to run: "original" for original images, "sd_baseline" for SD-processed images'
+    )
+    args = parser.parse_args()
+    
     print("Loading dataset...")
     dataset = load_cod10k_lazy()
 
@@ -312,15 +329,17 @@ def main():
     
     clip_tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch16")
 
-    # Load BASE Stable Diffusion pipeline (no LoRA)
-    print("Loading BASE Stable Diffusion pipeline (no fine-tuning)...")
-    sd_pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
-        "stable-diffusion-v1-5/stable-diffusion-v1-5",
-        torch_dtype=torch.float16
-    ).to("cuda")
-    sd_pipeline.set_progress_bar_config(disable=True)
-    sd_pipeline.unet.eval()
-    sd_pipeline.vae.eval()
+    # Only load SD pipeline if needed
+    sd_pipeline = None
+    if args.eval_type == 'sd_baseline':
+        print("Loading BASE Stable Diffusion pipeline (no fine-tuning)...")
+        sd_pipeline = StableDiffusionImg2ImgPipeline.from_pretrained(
+            "stable-diffusion-v1-5/stable-diffusion-v1-5",
+            torch_dtype=torch.float16
+        ).to("cuda")
+        sd_pipeline.set_progress_bar_config(disable=True)
+        sd_pipeline.unet.eval()
+        sd_pipeline.vae.eval()
 
     os.makedirs('eval_outputs', exist_ok=True)
 
@@ -336,64 +355,54 @@ def main():
         print(f"Evaluating {split} split")
         print(f"{'='*60}")
         
-        # 1. Baseline: Original images → CLIP
-        print("\n[1/2] Baseline: Original images → CLIP")
-        results_original = eval(dataset[split], label_names, clip_model, clip_tokenizer, num_samples=None)
+        if args.eval_type == 'original':
+            # Baseline: Original images → CLIP
+            print("\nBaseline: Original images → CLIP")
+            results_original = eval(dataset[split], label_names, clip_model, clip_tokenizer, num_samples=None)
+            
+            output_file_orig = f'eval_outputs/eval_results_COD10K_{split}_original.json'
+            with open(output_file_orig, 'w') as f:
+                json.dump(results_original, f, indent=2)
+            
+            print(f"Results written to {output_file_orig}")
+            print(f"Summary (Original images):")
+            print(f"  NLL: {results_original['mean_nll']:.4f}")
+            print(f"  Probability: {results_original['mean_probability']:.4f}")
+            print(f"  Top-1 Accuracy: {results_original['top1_accuracy']:.4f}")
+            print(f"  Top-2 Accuracy: {results_original['top2_accuracy']:.4f}")
+            print(f"  Top-3 Accuracy: {results_original['top3_accuracy']:.4f}")
+            print(f"  Top-4 Accuracy: {results_original['top4_accuracy']:.4f}")
+            print(f"  Top-5 Accuracy: {results_original['top5_accuracy']:.4f}")
         
-        output_file_orig = f'eval_outputs/eval_results_COD10K_{split}_original.json'
-        with open(output_file_orig, 'w') as f:
-            json.dump(results_original, f, indent=2)
-        
-        print(f"Results written to {output_file_orig}")
-        print(f"Summary (Original images):")
-        print(f"  NLL: {results_original['mean_nll']:.4f}")
-        print(f"  Probability: {results_original['mean_probability']:.4f}")
-        print(f"  Top-1 Accuracy: {results_original['top1_accuracy']:.4f}")
-        print(f"  Top-2 Accuracy: {results_original['top2_accuracy']:.4f}")
-        print(f"  Top-3 Accuracy: {results_original['top3_accuracy']:.4f}")
-        print(f"  Top-4 Accuracy: {results_original['top4_accuracy']:.4f}")
-        print(f"  Top-5 Accuracy: {results_original['top5_accuracy']:.4f}")
-        
-        # 2. Baseline: Original images → BASE SD → CLIP
-        print("\n[2/2] Baseline: Original images → BASE SD → CLIP")
-        results_sd_baseline = eval_with_sd_baseline(
-            dataset[split], 
-            label_names, 
-            clip_model, 
-            clip_tokenizer,
-            sd_pipeline,
-            prompt=prompt,
-            noise_strength=noise_strength,
-            num_steps=num_steps,
-            guidance_scale=guidance_scale,
-            num_samples=None
-        )
-        
-        output_file_sd = f'eval_outputs/eval_results_COD10K_{split}_sd_baseline.json'
-        with open(output_file_sd, 'w') as f:
-            json.dump(results_sd_baseline, f, indent=2)
-        
-        print(f"Results written to {output_file_sd}")
-        print(f"Summary (BASE SD processed images):")
-        print(f"  NLL: {results_sd_baseline['mean_nll']:.4f}")
-        print(f"  Probability: {results_sd_baseline['mean_probability']:.4f}")
-        print(f"  Top-1 Accuracy: {results_sd_baseline['top1_accuracy']:.4f}")
-        print(f"  Top-2 Accuracy: {results_sd_baseline['top2_accuracy']:.4f}")
-        print(f"  Top-3 Accuracy: {results_sd_baseline['top3_accuracy']:.4f}")
-        print(f"  Top-4 Accuracy: {results_sd_baseline['top4_accuracy']:.4f}")
-        print(f"  Top-5 Accuracy: {results_sd_baseline['top5_accuracy']:.4f}")
-        
-        # Comparison summary
-        print(f"\n{'='*60}")
-        print(f"Comparison ({split} split):")
-        print(f"{'='*60}")
-        print(f"{'Metric':<20} | {'Original':<15} | {'BASE SD':<15} | {'Δ':<10}")
-        print("-" * 60)
-        print(f"{'Top-1 Accuracy':<20} | {results_original['top1_accuracy']:<15.4f} | {results_sd_baseline['top1_accuracy']:<15.4f} | {results_sd_baseline['top1_accuracy'] - results_original['top1_accuracy']:+.4f}")
-        print(f"{'Top-5 Accuracy':<20} | {results_original['top5_accuracy']:<15.4f} | {results_sd_baseline['top5_accuracy']:<15.4f} | {results_sd_baseline['top5_accuracy'] - results_original['top5_accuracy']:+.4f}")
-        print(f"{'Mean Probability':<20} | {results_original['mean_probability']:<15.4f} | {results_sd_baseline['mean_probability']:<15.4f} | {results_sd_baseline['mean_probability'] - results_original['mean_probability']:+.4f}")
-        print(f"{'Mean NLL':<20} | {results_original['mean_nll']:<15.4f} | {results_sd_baseline['mean_nll']:<15.4f} | {results_sd_baseline['mean_nll'] - results_original['mean_nll']:+.4f}")
-        print(f"{'='*60}\n")
+        elif args.eval_type == 'sd_baseline':
+            # Baseline: Original images → BASE SD → CLIP
+            print("\nBaseline: Original images → BASE SD → CLIP")
+            results_sd_baseline = eval_with_sd_baseline(
+                dataset[split], 
+                label_names, 
+                clip_model, 
+                clip_tokenizer,
+                sd_pipeline,
+                prompt=prompt,
+                noise_strength=noise_strength,
+                num_steps=num_steps,
+                guidance_scale=guidance_scale,
+                num_samples=None
+            )
+            
+            output_file_sd = f'eval_outputs/eval_results_COD10K_{split}_sd_baseline.json'
+            with open(output_file_sd, 'w') as f:
+                json.dump(results_sd_baseline, f, indent=2)
+            
+            print(f"Results written to {output_file_sd}")
+            print(f"Summary (BASE SD processed images):")
+            print(f"  NLL: {results_sd_baseline['mean_nll']:.4f}")
+            print(f"  Probability: {results_sd_baseline['mean_probability']:.4f}")
+            print(f"  Top-1 Accuracy: {results_sd_baseline['top1_accuracy']:.4f}")
+            print(f"  Top-2 Accuracy: {results_sd_baseline['top2_accuracy']:.4f}")
+            print(f"  Top-3 Accuracy: {results_sd_baseline['top3_accuracy']:.4f}")
+            print(f"  Top-4 Accuracy: {results_sd_baseline['top4_accuracy']:.4f}")
+            print(f"  Top-5 Accuracy: {results_sd_baseline['top5_accuracy']:.4f}")
     
 if __name__ == "__main__":
     main()
