@@ -17,6 +17,13 @@ possible labels
 from rl.reward import CLIPReward
 from rl.ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
 from data.COD_dataset import build_COD_torch_dataset
+from data.corruption_datasets import (
+    CIFARCorruptionDataset,
+    TinyImageNetCorruptionDataset,
+    build_resnet50_classifier,
+    IMAGENET_MEAN,
+    IMAGENET_STD,
+)
 
 from trl import DDPOConfig
 from torch.utils.data import DataLoader, Subset
@@ -30,6 +37,108 @@ import argparse
 from pprint import pprint
 import signal
 from datetime import datetime
+
+
+CIFAR10_LABELS = [
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
+]
+
+
+class ClassifierReward:
+    """Reward based on a classifier's target logit.
+
+    Supports the same variants as CLIPReward: logit_change and logit_max_margin.
+    """
+
+    def __init__(
+        self,
+        classifier: torch.nn.Module,
+        device: str | torch.device,
+        reward_variant: str = "logit_change",
+        normalize_mean=IMAGENET_MEAN,
+        normalize_std=IMAGENET_STD,
+    ) -> None:
+        if reward_variant not in ["logit_max_margin", "logit_change"]:
+            raise ValueError("Invalid reward_variant for ClassifierReward")
+
+        self.reward_variant = reward_variant
+        self.device = device
+        self.classifier = classifier.to(device)
+        self.classifier.eval()
+        for p in self.classifier.parameters():
+            p.requires_grad_(False)
+
+        mean = torch.tensor(normalize_mean, device=device).view(1, 3, 1, 1)
+        std = torch.tensor(normalize_std, device=device).view(1, 3, 1, 1)
+        self.normalize_mean = mean
+        self.normalize_std = std
+
+    def _normalize(self, images: torch.Tensor) -> torch.Tensor:
+        images = images.to(device=self.device, dtype=torch.float32)
+        images = torch.clamp(images, 0.0, 1.0)
+        return (images - self.normalize_mean) / self.normalize_std
+
+    def _compute_logits(self, images: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            normed = self._normalize(images)
+            logits = self.classifier(normed)
+        return logits
+
+    def _logit_max_margin_reward(
+        self, images: torch.Tensor, labels: torch.Tensor
+    ) -> torch.Tensor:
+        batch_size = images.shape[0]
+        logits = self._compute_logits(images)
+        target_logits = logits[torch.arange(batch_size, device=logits.device), labels]
+
+        mask = torch.ones_like(logits, dtype=torch.bool)
+        mask[torch.arange(batch_size), labels] = False
+        other_logits = logits[mask].view(batch_size, -1)
+        max_other_logits, _ = other_logits.max(dim=1)
+        return target_logits - max_other_logits
+
+    def _logit_change_reward(
+        self,
+        images: torch.Tensor,
+        labels: torch.Tensor,
+        original_images: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        current_logits = self._compute_logits(images)
+        current_target_logits = current_logits[
+            torch.arange(images.shape[0], device=current_logits.device), labels
+        ]
+
+        if original_images is None:
+            return current_target_logits
+
+        original_logits = self._compute_logits(original_images)
+        original_target_logits = original_logits[
+            torch.arange(original_images.shape[0], device=original_logits.device), labels
+        ]
+        return current_target_logits - original_target_logits
+
+    def __call__(
+        self,
+        images: torch.Tensor,
+        labels: torch.Tensor,
+        original_images: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        if self.reward_variant == "logit_max_margin":
+            return self._logit_max_margin_reward(images, labels)
+        elif self.reward_variant == "logit_change":
+            return self._logit_change_reward(images, labels, original_images)
+        else:
+            raise ValueError(f"Unknown reward variant: {self.reward_variant}")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run DDPO training for image enhancement.")
