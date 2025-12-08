@@ -62,7 +62,7 @@
 			/* Ensure the container is full width */
 			justify-content: left;
 			/* Horizontally centers the children in the container */
-			align-items: center;
+			align-items: flex-start;
 			/* Vertically centers the children in the container */
 		}
 
@@ -99,9 +99,10 @@
 			max-width: 256px;
 			/* Optional: Maximum width */
 			position: relative;
-			text-align: left;
-			padding: 10px;
-			/* Optional: Adds padding inside the caption */
+			text-align: left; 
+			padding-left: 10px;
+			padding-right: 5px;
+			/* top right bottom left */
 		}
 
 		.citation-margin {
@@ -417,10 +418,10 @@
 			the classifier.
 			<br><br>
 			
-			In this work, we investigate whether Stable Diffusion v1.5,
+			In this work, we investigate whether Stable Diffusion v1.5 <a href="#ref_rombach" class="cite"></a>,
 			optimized through both Supervised Fine-Tuning (SFT) and
-			Reinforcement Learning (DDPO), can improve the zero-shot
-			classification performance of CLIP on two distinct domains of visual
+			Reinforcement Learning (DDPO <a href="#ref_black" class="cite"></a>), can improve the zero-shot
+			classification performance of CLIP <a href="#ref_radford" class="cite"></a> on two distinct domains of visual
 			degradation:
 			<ul>
 				<li>
@@ -608,7 +609,7 @@
 				<li>
 					<strong>Differentiable Denoising:</strong> Starting from \( z_{t_{\text{start}}} \),
 					we run a deterministic DDIM denoising loop for the remaining
-					\( \alpha \times \text{num\_steps} \) steps. At each timestep \( t \), the UNet
+					\( \alpha \times \text{num_steps} \) steps. At each timestep \( t \), the UNet
 					predicts noise \( \epsilon_\theta(z_t, c, t) \), where \( c \)
 					is the text conditioning. We optionally apply classifier-free guidance (CFG)
 					by computing both unconditional and conditional predictions and combining
