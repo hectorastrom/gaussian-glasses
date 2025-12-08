@@ -1,8 +1,7 @@
-"""
-Dataset and classifier utilities for corruption benchmarks.
+"""Dataset utilities for corruption benchmarks.
+
 - CIFAR-10-C / CIFAR-100-C support (numpy blobs)
 - Tiny-ImageNet-C support (folder-per-class)
-- ResNet-50 factory + evaluation loop for quick loss/accuracy checks
 
 Refer to https://github.com/hendrycks/robustness
 """
@@ -13,25 +12,17 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 import numpy as np
-import torch
 from PIL import Image
-from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
-from torchvision.models import ResNet50_Weights, resnet50
-from tqdm import tqdm
-
-IMAGENET_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_STD = (0.229, 0.224, 0.225)
 
 
 def _default_transform(image_size: int = 224) -> transforms.Compose:
-    """ImageNet-style preprocessing for ResNet backbones."""
+    """Simple resize + ToTensor transform (no normalization)."""
     return transforms.Compose(
         [
             transforms.Resize((image_size, image_size), antialias=True),
             transforms.ToTensor(),
-            transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
         ]
     )
 
@@ -220,59 +211,6 @@ def make_tiny_imagenet_c_loader(
         num_workers=num_workers,
         pin_memory=True,
     )
-
-
-def build_resnet50_classifier(
-    num_classes: int,
-    pretrained: bool = True,
-    freeze_backbone: bool = False,
-    device: str | torch.device = "cpu",
-) -> Tuple[nn.Module, transforms.Compose]:
-    """Construct ResNet-50 with adjustable head and matching transforms."""
-    weights = ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
-    model = resnet50(weights=weights)
-    in_features = model.fc.in_features
-    model.fc = nn.Linear(in_features, num_classes)
-
-    if freeze_backbone:
-        for name, param in model.named_parameters():
-            if not name.startswith("fc"):
-                param.requires_grad_(False)
-
-    model.to(device)
-    transform = weights.transforms() if weights is not None else _default_transform()
-    return model, transform
-
-
-@torch.no_grad()
-def evaluate_classifier(
-    model: nn.Module,
-    dataloader: DataLoader,
-    device: str | torch.device = "cpu",
-) -> Dict[str, float]:
-    """Compute average cross-entropy loss and top-1 accuracy."""
-    criterion = nn.CrossEntropyLoss()
-    model.eval()
-
-    total_loss = 0.0
-    total_correct = 0
-    total = 0
-
-    for batch in tqdm(dataloader, desc="Evaluating classifier", leave=False):
-        images = batch["pixel_values"].to(device)
-        labels = batch["label"].to(device)
-
-        logits = model(images)
-        loss = criterion(logits, labels)
-
-        total_loss += loss.item() * labels.size(0)
-        preds = logits.argmax(dim=1)
-        total_correct += (preds == labels).sum().item()
-        total += labels.size(0)
-
-    avg_loss = total_loss / max(total, 1)
-    acc = total_correct / max(total, 1)
-    return {"loss": avg_loss, "acc": acc}
 
 
 def available_cifar_corruptions(
