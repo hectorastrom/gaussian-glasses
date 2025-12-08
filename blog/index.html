@@ -30,6 +30,13 @@
 			font-style: italic;
 		}
 
+		@font-face {
+			font-family: 'Caudex-Bold';
+			src: url('fonts/Caudex-Bold.ttf') format('truetype');
+			font-weight: bold;
+			font-style: normal;
+		}
+
 		body {
 			background-color: #f5f9ff;
 		}
@@ -333,12 +340,11 @@
 		<div class="main-content-block">
 			<table class="header" align="left">
 				<tr>
-					<td colspan="4">
-						<span style="
-                  font-size: 32px;
-                  font-family: 'Courier New', Courier, monospace; /* Adds fallbacks */
-						">Gaussian Glasses: Can Diffusion Models Be Used for
-						Semantic Signal Amplification for Vision Classifiers?</span>
+					<td colspan="6">
+						<span style="font-size: 32px; font-family: 'Caudex-Bold', serif">
+				  			Gaussian Glasses: Do Diffusion Priors Help Classification
+				  			Under Corruption and Camouflage?
+						</span>
 					</td>
 				</tr>
 				<tr>
@@ -402,14 +408,13 @@
 			"understanding" the contents of a scene to modify it.
 			<br><br>
 			
-			This rapid progress raises a central question in computer vision:
-			Can the rich, generative manifold of a foundation model function as
-			a semantic denoiser for discriminative classifiers? Essentially, we
-			explore whether the probabilistic "belief" of a diffusion model—its
-			learned distribution of what objects should look like—can be
-			leveraged to perform Semantic Signal Amplification, recovering
-			recognizable features from ambiguous inputs to aid downstream
-			classification.
+			This progress motivates a central question in robust computer
+			vision: <b>can a diffusion prior be used as a label-preserving
+			semantic denoiser for recognition?</b> Concretely, we ask whether
+			diffusion-based reconstruction can restore discriminative structure
+			in ambiguous or corrupted inputs, improving downstream
+			classification by transforming the <i>data</i> rather than modifying
+			the classifier.
 			<br><br>
 			
 			In this work, we investigate whether Stable Diffusion v1.5,
@@ -419,26 +424,33 @@
 			degradation:
 			<ul>
 				<li>
-					<b>Natural Ambiguity:</b> The COD10K (Camouflaged Object Detection) dataset,
+					<b>Natural Ambiguity:</b> The COD10K (Camouflaged Object Detection) dataset <a href="#ref_fan" class="cite"></a>,
 					where the signal (animal) is hidden or camouflaged.
 				</li>
 				<li>
-					<b>Algorithmic Corruption:</b> The CIFAR-10-C dataset, representing
-					standard noise and blur degradations.
+					<b>Algorithmic Corruption:</b> The CIFAR-10-C dataset <a href="#ref_hendrycks" class="cite"></a>, representing
+					algorithmic noise and blur degradations to CIFAR-10 images.
 				</li>
 			</ul>
 			
-			We report a negative result. Our experiments demonstrate that
-			despite the semantic strength of the diffusion prior, the generative
-			reconstruction introduces stochastic hallucinations that decouple
-			the image from its ground truth label more often than it recovers
-			the signal. We find that neither SFT nor RL-based optimization
-			yields a statistically significant improvement over the base CLIP
-			accuracy. Given the substantial computational complexity and latency
+			We report a negative result. Our attempts find that neither SFT nor
+			RL-based optimization yield a statistically significant improvement
+			over the base CLIP accuracy. 
+
+			To read more about our hypotheses for the failure modes, refer to the <a href="#discussion">discussion.</a>
+			
+			<br><br>
+			Given the substantial computational complexity and latency
 			introduced by the diffusion loop, we conclude that generative
-			semantic completion—at least within this architectural paradigm—is
-			an ineffective approach for enhancing robustness to visually
-			degraded inputs compared to standard discriminative baselines.
+			semantic completion -- at least for these tasks -- is
+			an ineffective approach for improving robustness to visually
+			degraded inputs compared to standard classifier baselines.
+
+			<br><br>
+			All code for this experiement is available <a
+			href="https://github.com/hectorastrom/diffusion-lens">here.</a>
+			For readers to build on this work, we also provide a standalone implementation of the ImageDDPOTrainer
+			<a href="https://github.com/hectorastrom/imageddpo">here.</a>
 		</div>
 		<div class="margin-right-block">
 		</div>
@@ -494,6 +506,8 @@
 			</p>
 
 			<h2 id="preliminaries_pg">Policy Gradient Methods (Hector)</h2>
+			MOTIVATE WHY WE MIGHT WANT TO USE RL TO BEGIN WTIH
+			(BLACK BOX OPTIMIZATION)
 			Explain Policy Gradient fundamentals.
 			<h2 id="preliminaries_ddpo">DDPOTrainer (Hector)</h2>
 			Explain DDPOTrainer
@@ -530,11 +544,6 @@
 			ImageDDPOTrainer is used) Luc will write about modifications made to
 			original setup for the CIFAR-C task.
 			<h2 id="methods_sft">Supervised Fine-Tuning (Kevin)</h2>
-			<b>Explain the methodology for the SFT camouflage attempt. Can just briefly
-				say mention we didn't SFT for CIFAR-C (or even better: do run SFT for
-				CIFAR-C!) Though kevin if this is easy to set up after Luc has the dset
-				it would make sense to do SFT for CIFAR-C as well, as it just makes our
-				paper and results very easy to follow.</b>
 			<p>
 				We also
 				explore a supervised fine-tuning (SFT) method that directly backpropagates
@@ -1277,6 +1286,16 @@
 						Black, K., Janner, M., Du, Y., Kostrikov, I., & Levine, S. (2023).
 						<a href="https://arxiv.org/abs/2305.13301">Training Diffusion Models with Reinforcement Learning</a>.
 						NeurIPS 2023.
+					</li>
+					<li id="ref_fan">
+						Fan, D.-P., et al. (2021).
+						<a href="https://doi.org/10.48550/arXiv.2102.10274">Concealed Object Detection</a>.
+						arXiv:2102.10274.
+					</li>
+					<li id="ref_hendrycks">
+						Hendrycks, D., & Dietterich, T. (2019).
+						<a href="https://doi.org/10.48550/arXiv.1903.12261">Benchmarking Neural Network Robustness to Common Corruptions and Perturbations</a>.
+						arXiv:1903.12261.
 					</li>
 				</ol>
 			</div>
