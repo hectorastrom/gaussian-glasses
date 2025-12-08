@@ -657,6 +657,7 @@
 				size 2 × 8 accumulation steps). We use the AdamW optimizer with a learning
 				rate of 1e-4. The diffusion process uses 20 total steps with a noise strength
 				of 0.4, meaning we denoise only the final 40% of the diffusion schedule.
+				We use a guidance scale of 1.0 for all the SFT experiments.
 				This I2I approach allows the model to make targeted modifications to the
 				input image while preserving its overall structure.
 			</p>
