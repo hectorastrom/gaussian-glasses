@@ -382,7 +382,7 @@
 				<a href="#methods">Methods</a><br /><br />
 				<a href="#results">Results</a><br /><br />
 				<a href="#discussion">Discussion</a><br /><br />
-				<a href="#citations">References</a><br /><br />
+				<a href="#conclusion">Conclusion</a><br /><br />
 			</div>
 		</div>
 		<div class="main-content-block">
@@ -568,8 +568,8 @@
 
 			$$
 			\begin{gathered}
-			\text{Image} \to \text{VAE Encode} \to \text{Add Noise} \to \text{UNet (LoRA)}
-			\to \text{Denoise} \to \text{VAE Decode} \to \text{CLIP} \to \text{Classification Loss}
+			\text{Image} \to \text{VAE Encode} \to \text{Add Noise}
+			\to \text{Denoise w/ UNet (LoRA)} \to \text{VAE Decode} \to \text{CLIP} \to \text{Classification Loss}
 			\end{gathered}
 			$$
 
@@ -779,9 +779,9 @@
 				This model uses empty prompts for the diffusion model, which we discuss below to perform with
 				no meaningful difference from custom prompts.
 			</p>
-			<div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+			<div style="display: flex; flex-wrap: nowrap; gap: 15px; margin: 20px 0; justify-content: center;">
 				<!-- Pair 1 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/good_no_prompt_sft_before_1.png" alt="Before: Original camouflaged image"
@@ -803,7 +803,7 @@
 				</div>
 
 				<!-- Pair 2 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/original_2.png" alt="Before: Original camouflaged image"
@@ -824,8 +824,8 @@
 					</div>
 				</div>
 
-				<!-- Pair 3 (template) -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<!-- Pair 3 -->
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/original_3.png" alt="Before: Original camouflaged image"
@@ -846,10 +846,13 @@
 					</div>
 				</div>
 			</div>
+			<p class="image-caption" style="font-size: 1.1em; font-weight: bold; margin-top: 15px; margin-bottom: 30px; color: black;">
+				'Good' Generations
+			</p>
 
-			<div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+			<div style="display: flex; flex-wrap: nowrap; gap: 15px; margin: 20px 0; justify-content: center;">
 				<!-- Failure Pair 1 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/fail_no_prompt_sft_before_4.png" alt="Before: Original camouflaged image"
@@ -871,7 +874,7 @@
 				</div>
 
 				<!-- Failure Pair 2 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/fail_no_prompt_sft_before_5.png" alt="Before: Original camouflaged image"
@@ -893,7 +896,7 @@
 				</div>
 
 				<!-- Failure Pair 3 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/fail_no_prompt_sft_before_6.png" alt="Before: Original camouflaged image"
@@ -914,6 +917,9 @@
 					</div>
 				</div>
 			</div>
+			<p class="image-caption" style="font-size: 1.1em; font-weight: bold; margin-top: 15px; margin-bottom: 30px; color: black;">
+				'Bad' Generations
+			</p>
 
 			<p>
 				The first row shows results of "good" generations from diffusion model, while the second row shows poor
@@ -966,9 +972,9 @@
 			</p>
 
 			
-			<div style="display: flex; flex-wrap: wrap; gap: 15px; margin: 20px 0; justify-content: center;">
+			<div style="display: flex; flex-wrap: nowrap; gap: 15px; margin: 20px 0; justify-content: center;">
 				<!-- Pair 1 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/oracle_prompt_before_1.png" alt="Before: Original camouflaged image"
@@ -990,7 +996,7 @@
 				</div>
 				
 				<!-- Pair 2 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/oracle_prompt_before_2.png" alt="Before: Original camouflaged image"
@@ -1012,7 +1018,7 @@
 				</div>
 				
 				<!-- Pair 3 -->
-				<div style="flex: 0 0 auto; width: 280px;">
+				<div style="flex: 1; min-width: 0;">
 					<div style="display: flex; gap: 8px;">
 						<div style="flex: 1;">
 							<img src="./images/oracle_prompt_before_3.png" alt="Before: Original camouflaged image"
@@ -1033,11 +1039,15 @@
 					</div>
 				</div>
 			</div>
+			<p class="image-caption" style="font-size: 1.1em; font-weight: bold; margin-top: 15px; margin-bottom: 30px; color: black;">
+				ORACLE Prompt Generations
+			</p>
 
 			<p>
-				As 
-				expected, the ORACLE prompt performed the best, but the generated images clearly deviate from the original image 
-				and simply generates the class image. 
+				As expected, the ORACLE prompt performed the best. However, the
+				diffusion model tends to <i>cheat</i>, generating images
+				unrecognizable from the original image 
+				to hack the reward for the desired class. 
 			</p>
 
 			<h4>RL-Trained Model Results</h4>
@@ -1197,42 +1207,110 @@
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 			<h1>Discussion</h1>
+	
+			<h3>Results Overview</h3>
+			<!-- TODO: add RL results -->
 			<p>
-				Our SFT-trained model achieves 25.32% top-1 accuracy, which falls short of the
-				44.87% CLIP baseline but more than doubles the 11.40% accuracy of the untrained
-				BASE SD model.
+				Our SFT-trained model achieves 25.32% top-1 accuracy. While this falls short of the
+				44.87% CLIP baseline, it represents a significant improvement over the untrained
+				BASE SD model, more than doubling its 11.40% accuracy.
+			</p>
+	
+			<h3>Failure Analysis</h3>
+			<p>
+				The fundamental challenge stems from tasking a generative
+				diffusion model with an implicitly discriminative objective.
+				Diffusion models are not pretrained for semantic label
+				preservation; rather, they are optimized to produce clean,
+				high-fidelity images from noise. This structural circularity
+				renders the task fundamentally ill-posed: the model implicitly
+				requires the semantic label to correctly denoise the image, yet
+				the purpose of the denoising is to recover that very label.
+				
+				<br><br>
+				When presented with the label ambiguity inherent in camouflaged
+				images, the model performs stochastic sampling over plausible
+				choices. Consequently, if the model initially misidentifies the
+				subject, it denoises toward the wrong class distribution,
+				effectively hallucinating a high-quality but semantically
+				incorrect object.
 			</p>
 			<p>
-				When the model succeeds, it exhibits useful visual transformations like selectively
-				blurring backgrounds while preserving foreground objects, which helps camouflaged
-				subjects stand out. This suggests the model learns a meaningful "de-camouflage"
-				operation in some cases. However, the failure cases reveal a clear pattern: the
-				model misidentifies camouflaged objects and denoises toward the wrong class
-				distribution, effectively hallucinating incorrect objects. This is particularly
-				problematic for harder camouflage images where even humans struggle to identify the
-				subject. Without explicit text guidance (empty prompts), the model lacks the semantic
-				information needed to preserve the correct object, explaining the overall accuracy gap.
+				From an optimization perspective, this approach also struggles with credit assignment.
+				Propagating gradients or rewards through 10-20 denoising steps is computationally
+				expensive and obscures the causal link between specific denoising actions and the
+				final classification. Furthermore, the reward signal itself is sparse and exhibits
+				high variance, bounded by the relatively weak performance (< 50%) 
+				of the CLIP baseline on this specific dataset. This combination
+				makes the optimization landscape difficult to traverse and
+				highly sample-inefficient. </p>
+	
+					<!-- <h3>Limitations</h3>
+					<p>
+						The primary limitation is the accuracy-corruption tradeoff inherent in the I2I
+						diffusion process. While capable of enhancing images by "de-camouflaging" subjects,
+						the model risks corrupting the semantic content when it hallucinates incorrect features.
+						Additionally, the reliance on a diffusion backbone introduces substantial inference
+						latency due to the iterative denoising process. Our experiments are also limited by
+						the scale of the filtered COD10K dataset (~6,000 images), and the LoRA adapters are
+						highly specialized; generalization to other domains (e.g., medical imaging or
+						satellite imagery) would likely require separate fine-tuning on task-specific data.
+					</p> -->
+					
+					<h3>Extensions</h3>
+					<p>
+						We propose several extensions to address these limitations and improve performance:
+					<ul>
+						<li><strong>Hyperparameter Tuning:</strong> Systematic optimization of
+							<code>noise_strength</code>, <code>learning rate</code>, and
+							<code>guidance_scale</code> (in order of expected impact).
+						</li>
+						<li><strong>Compute and Data:</strong> Scaling up to longer training runs and
+							expanding the dataset size to improve generalization.</li>
+						<li><strong>Confidence-Based Gating:</strong> Implementing a mechanism to only
+							apply diffusion modifications to images where the baseline classifier has low
+							confidence.</li>
+						<li><strong>Annealing ORACLE Prompt:</strong> Initializing generation with a
+							high <code>guidance_scale</code> using the ground-truth label (ORACLE), then
+							gradually annealing the guidance to transition the model from prompt-dependence
+							to autonomous detection.</li>
+						<li><strong>New Tasks:</strong> Applying this generative-classification approach
+							to other domains, such as classifying partial sketches by generating the complete
+							scene.</li>
+					</ul>
+			</p>
+		</div>
+		<div class="margin-right-block"></div>
+	</div>
+	
+	<div class="content-margin-container" id="conclusion">
+		<div class="margin-left-block"></div>
+		<div class="main-content-block">
+			<h1>Conclusion</h1>
+			<p>
+				Our investigation yields a negative result: employing a
+				diffusion prior for semantic denoising fails to improve
+				zero-shot classification performance on camouflaged or corrupted
+				data.
+			</p>
+			<!-- TODO: Come back with real results -->
+			<p>
+				While supervised fine-tuning (and maybe RL?) exhibited
+				improvements over a base, unadapted generator, the inherent
+				stochasticity of the diffusion process introduces makes this
+				an overconstrained problem, and results in the the
+				hallucination of new features rather than the pronounciation of
+				existing ones. When weighed against the substantial
+				computational overhead of iterative denoising, this
+				accuracy-corruption tradeoff renders the approach ineffective
+				compared to standard discriminative baselines (or more direct
+				methods like SFT or linear probing on the classifier).
 			</p>
 			<p>
-				The primary limitation is the accuracy-corruption tradeoff inherent in the I2I
-				diffusion process. While capable of enhancing images, it can also corrupt them when
-				the model misidentifies the subject. Additionally, using a diffusion model adds
-				substantial inference latency (10-20 denoising steps), and our experiments are
-				limited to the COD10K dataset (~6,000 images). The LoRA adapters are trained
-				specifically for camouflage detection, so generalization to other domains (medical
-				imaging, satellite imagery) would require separate fine-tuning on task-specific
-				datasets. Several modifications could improve results: reducing noise strength from 0.4 to 0.2-0.3 to
-				preserve more original structure;
-				confidence-based gating to only enhance low-confidence images; or curriculum learning
-				to train on easier samples first.
-			</p>
-			<p>
-				While our SFT approach does not yet outperform the CLIP baseline, it demonstrates
-				that diffusion models can learn meaningful image transformations for classification
-				tasks. The significant improvement over BASE SD and the promising behavior in
-				successful cases suggest that with better guidance mechanisms, diffusion-based
-				enhancement remains a viable approach for challenging perception tasks like
-				camouflage detection.
+				We present these findings to discourage similar architectural
+				choices in the future: for tasks requiring precise semantic
+				preservation under ambiguity, current generative priors are
+				ill-suited to serve as pre-processing filters.
 			</p>
 		</div>
 		<div class="margin-right-block"></div>
