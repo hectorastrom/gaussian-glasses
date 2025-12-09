@@ -17,7 +17,7 @@ possible labels.
 This script works with both the COD10K and CIFAR-C datasets, as discussed in the blog.
 It defaults to COD10K, and can be changed with the --dataset arg. 
 """
-from rl.ddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
+from imageddpo import ImageDDPOTrainer, I2IDDPOStableDiffusionPipeline
 from rl.utils import (
     build_data_and_reward,
     run_classifier_eval,

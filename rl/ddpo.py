@@ -1,7 +1,15 @@
+"""
+Code building the ImageDDPOTrainer and I2IPipeline on top of TRL's DDPOTrainer.
+
+NOW DEPRECATED. Instead, use the imageddpo package with `pip install imageddpo`
+"""
+
 # @Time    : 2025-11-24 13:11
 # @Author  : Hector Astrom
 # @Email   : hastrom@mit.edu
 # @File    : ddpo.py
+
+exit(0)
 
 import torch
 import numpy as np
