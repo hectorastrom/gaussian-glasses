@@ -92,9 +92,6 @@ accelerate launch -m rl.rl_trainer
 # CIFAR-10-C
 accelerate launch -m rl.rl_trainer --dataset cifar10-c --corruption gaussian_noise --severity 1
 
-# CIFAR-100-C
-accelerate launch -m rl.rl_trainer --dataset cifar100-c --corruption gaussian_noise --severity 1
-
 # Tiny-ImageNet-C
 accelerate launch -m rl.rl_trainer --dataset tiny-imagenet-c --corruption gaussian_noise --severity 1
 

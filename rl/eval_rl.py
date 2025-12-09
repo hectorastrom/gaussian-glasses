@@ -29,8 +29,8 @@ prompt = "" # TODO: currently don't support ORACLE prompt
 
 # where to find weights
 # download weights with e.g. aws s3 cp s3://hectorastrom-dl-final/checkpoints/robust-totem-89/epoch224/pytorch_lora_weights.safetensors weights/robust-totem-89/epoch224/lora.safetensors
-wandb_runname = "robust-totem-89"
-epoch_num = 224
+wandb_runname = "driven-violet-95"
+epoch_num = 438
 epoch_str = f"/epoch{epoch_num}/" if epoch_num is not None else ""
 lora_path = f"./weights/{wandb_runname}{epoch_str}lora.safetensors"
 
