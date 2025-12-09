@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument(
         "--dataset",
         type=str,
-        choices=["cod", "cifar10-c", "cifar100-c", "tiny-imagenet-c"],
+        choices=["cod", "cifar10-c", "cifar100-c", "tiny-imagenet-c", "imagenet-c"],
         default="cod",
         help="Which dataset to use for RL training.",
     )
@@ -61,19 +61,19 @@ def parse_args():
         "--data_root",
         type=str,
         default="./data",
-        help="Root directory containing datasets (for CIFAR/Tiny-ImageNet-C).",
+        help="Root directory containing datasets (for CIFAR/Tiny-ImageNet-C/ImageNet-C).",
     )
     parser.add_argument(
         "--corruption",
         type=str,
         default=None,
-        help="Corruption name for CIFAR-C / Tiny-ImageNet-C (e.g., gaussian_noise, fog).",
+        help="Corruption name for CIFAR-C / Tiny-ImageNet-C / ImageNet-C (e.g., gaussian_noise, fog).",
     )
     parser.add_argument(
         "--severity",
         type=int,
         default=1,
-        help="Corruption severity (1-5) for CIFAR-C / Tiny-ImageNet-C.",
+        help="Corruption severity (1-5) for CIFAR-C / Tiny-ImageNet-C / ImageNet-C.",
     )
     ####################################
     parser.add_argument(
