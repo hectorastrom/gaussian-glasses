@@ -438,7 +438,7 @@
 			RL-based optimization yield a statistically significant improvement
 			over the base CLIP accuracy. 
 
-			To read more about our hypotheses for the failure modes, refer to the <a href="#discussion">discussion.</a>
+			To read more about our hypotheses for the failure modes, refer to the <a href="#discussion_failure_analysis">discussion.</a>
 			
 			<br><br>
 			Given the substantial computational complexity and latency
@@ -464,7 +464,7 @@
 			<!-- NOTE: Merging related work into this section; just cite a lot -->
 			<h2 id="preliminaries_diffusion">Diffusion (Kevin)</h2>
 			<p>
-			In this work, we adopt conditional diffusion probabilistic models
+			In this work, we adopt <strong>conditional diffusion probabilistic models</strong>, which define a distribution
 			<a href="#ref_sohldickstein" class="cite"></a> <a href="#ref_ho" class="cite"></a>, which define a distribution
 				\( p(x_0 | c) \) over data samples \( x_0 \) given an associated context \( c \).
 				These models operate by introducing a forward noising process
@@ -506,12 +506,92 @@
 				iterative, noise-to-data trajectory that is fully guided by the learned model.
 			</p>
 
-			<h2 id="preliminaries_pg">Policy Gradient Methods (Hector)</h2>
-			MOTIVATE WHY WE MIGHT WANT TO USE RL TO BEGIN WTIH
-			(BLACK BOX OPTIMIZATION)
-			Explain Policy Gradient fundamentals.
+			<h2 id="preliminaries_pg">Reinforcement Learning and Policy Gradient
+			Methods (Hector)</h2>
+			This work also explores the use of reinforcement learning to
+			optimize the diffusion model via the DDPO algorithm, enabling
+			optimization around a hypothetical black box classifier. 
+			<br><br>
+			<strong>Reinforcement Learning</strong> is a type of optimization
+			framework whereby an agent learns to make decisions (via a policy)
+			in an environment to maximize cumulative reward. As framed, the
+			agent does not need to understand everything about its environment —
+			nor any details about the reward function’s implementation — in
+			order to maximize it. This enables a) black box optimization and b)
+			optimization of arbitrary, non-differentiable objectives.
+			<br><br>
+			
+			<strong>Policy Gradient Methods</strong> <a href="#ref_pg_intro"
+			class="cite"></a> are a class of reinforcement learning algorithms
+			that maximize expected reward by directly optimizing policy
+			parameters. Policy gradient methods require two core components:
+			
+			<ol>
+				<li>A stochastic policy \( \pi_\theta \) (e.g. a neural net with
+				probabilistic outputs)</li>
+				<li>An advantage estimator \( \hat{A}_t \) (measuring how good
+				an action was compared to average)
+			</ol>
+			
+			The standard objective policy gradient methods seek to maximize is:
+			
+			$$ \mathcal{J}^{\text{PG}}(\theta) = \hat{\mathbb{E}}_t[\log
+			\pi_\theta (a_t|s_t) \hat{A}_t] $$
+			
+			\( \pi_\theta(a_t|s_t) \) is the current policy, trained to predict
+			action \( a_t \) from state \( s_t \). The Advantage function \(
+			\hat{A}_t \) <a href="#ref_schulman_gae" class="cite"></a>
+			quantifies how much better a specific action was compared to the
+			"average" action in that state and acts as a stable training signal
+			(compared to reward).
+			<br><br>
+
+			In code (e.g. PyTorch) we implement this using autograd by
+			minimizing the negative objective: \(
+			\mathcal{L}^{\text{PG}}=-\mathcal{J}^{\text{PG}} \).
+			<br><br>
+
+			<strong>PPO (Proximal Policy Optimization)</strong> extends policy
+			gradient methods by clipping the probability ratio between the new
+			and old policy, effectively building a trust region for the range of
+			allowed policy updates on each optimization step <a
+			href="#ref_schulman_ppo" class="cite"></a>.
+
 			<h2 id="preliminaries_ddpo">DDPOTrainer (Hector)</h2>
-			Explain DDPOTrainer
+			<strong>DDPO</strong> <a href="#ref_black" class="cite"></a> frames
+			the diffusion model as an agent in an environment, where the action
+			is the diffusion step, the state is the partially denoised image +
+			text promptconditioning, and the reward can be any function (e.g.
+			aesthetic quality, compressibility, classification accuracy, etc.). 
+
+			<br><br>
+
+			The HuggingFace TRL library <a href="#ref_trl_ddpo" class="cite"></a>
+			provides a (now
+			deprecated) DDPOTrainer
+			class to implement this learning algorithm. At a high level it works
+			as follows:
+			<ol>
+				<li>Initialize trainer with pipeline,
+				scheduler, reward, config.</li>
+				<li>Sample trajectories by running the
+				diffusion process and recording actions + log-probs.</li>
+				<li>Decode final latents to images.</li>
+				<li>Compute rewards for each sample.</li>
+				<li>Normalize advantages globally or
+				per-prompt.</li>
+				<li>Compute PPO loss using replayed log-probs +
+				current policy.</li>
+				<li>Update UNet via LoRA, keeping scheduler +
+				VAE fixed.</li>
+				<li>Repeat for many epochs (sample → PPO →
+				update).</li>
+			</ol>
+
+			In this work, we adapt the DDPOTrainer class to support image
+			inputs, so that the Stable Diffusion can be used as an image editor,
+			rather than just image generators. In the <a href="#methods_imageddpo">methods</a> section, we'll
+			discuss the modifications we made to the DDPOTrainer class. 
 		</div>
 		<div class="margin-right-block">
 		</div>
@@ -1217,7 +1297,7 @@
 				BASE SD model, more than doubling its 11.40% accuracy.
 			</p>
 	
-			<h3>Failure Analysis</h3>
+			<h3 id="discussion_failure_analysis">Failure Analysis</h3>
 			<p>
 				The fundamental challenge stems from tasking a generative
 				diffusion model with an implicitly discriminative objective.
@@ -1378,6 +1458,26 @@
 						Hendrycks, D., & Dietterich, T. (2019).
 						<a href="https://doi.org/10.48550/arXiv.1903.12261">Benchmarking Neural Network Robustness to Common Corruptions and Perturbations</a>.
 						arXiv:1903.12261.
+					</li>
+					<li id="ref_pg_intro">
+						Arxiv Insights (2018).
+						<a href="https://www.youtube.com/watch?v=5P7I-xPq8u8&t=17s">An Introduction to Policy Gradient Methods</a>.
+						YouTube.
+					</li>
+					<li id="ref_schulman_gae">
+						Schulman, J., Moritz, P., Levine, S., Jordan, M., & Abbeel, P. (2016).
+						<a href="https://doi.org/10.48550/arXiv.1506.02438">High-Dimensional Continuous Control Using Generalized Advantage Estimation</a>.
+						arXiv:1506.02438.
+					</li>
+					<li id="ref_schulman_ppo">
+						Schulman, J., Wolski, F., Dhariwal, P., Radford, A., & Klimov, O. (2017).
+						<a href="https://doi.org/10.48550/arXiv.1707.06347">Proximal Policy Optimization Algorithms</a>.
+						arXiv:1707.06347.
+					</li>
+					<li id="ref_trl_ddpo">
+						HuggingFace (n.d.).
+						<a href="https://huggingface.co/docs/trl/main/ddpo_trainer">Denoising Diffusion Policy Optimization</a>.
+						HuggingFace TRL Documentation.
 					</li>
 				</ol>
 			</div>

@@ -3,6 +3,7 @@
 # @Email   : hastrom@mit.edu
 # @File    : rl_trainer.py
 # Run with `accelerate launch -m rl.rl_trainer`
+# accelerate launch -m rl.rl_trainer --image_size 128 --gpu_batch_size 32 --loader_batch_size 128 --corruption gaussian_noise --dataset cifar10-c --noise_strength 0.2
 
 """
 Goal: Teach a diffusion model to perceptually enhance images of camouflaged
