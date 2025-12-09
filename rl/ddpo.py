@@ -21,6 +21,10 @@ def _get_variance(self, timestep, prev_timestep):
     All tensors (alphas_cumprod, final_alpha_cumprod, timestep, prev_timestep)
     are placed on the same device to avoid device mismatch in gather.
     Handles both scalar and batched timesteps.
+    
+    This is near identical to the implementation in TRL; however, a custom implemenation
+    was needed as alpha_cumprods and final_alpha_cumprod were often moved
+    .to(device) by accelerate, when they are expected to remain on CPU.
     """
     # Ensure we have tensors
     if not torch.is_tensor(timestep):
@@ -195,6 +199,7 @@ def scheduler_step(
         - torch.log(std_dev_t)
         - torch.log(torch.sqrt(2 * torch.as_tensor(np.pi, device=device, dtype=sample.dtype)))
     )
+    # Normalize log-prob over spatial dimensions to keep magnitudes stable
     log_prob = log_prob.mean(dim=tuple(range(1, log_prob.ndim)))
 
     return DDPOSchedulerOutput(prev_sample.type(sample.dtype), log_prob)
@@ -243,7 +248,7 @@ def i2i_pipeline_step(
     do_classifier_free_guidance = guidance_scale > 1.0
 
     # 3. Encode input prompt
-    
+
     # condition on classifier_free_guidance to avoid double generation in null
     # prompt case
     if not do_classifier_free_guidance:
@@ -274,22 +279,11 @@ def i2i_pipeline_step(
     timesteps = timesteps[start_idx:]
 
     # 5. Prepare latent variables
-    # Fix: avoiding double scaling, since noisy latents are already scaled
-    # inside _generate_samples
-    num_channels_latents = self.unet.config.in_channels
-
     if latents is None:
-        # Fallback: behave like text-only sampling
-        shape = (
-            batch_size * num_images_per_prompt,
-            num_channels_latents,
-            height // self.vae_scale_factor,
-            width // self.vae_scale_factor,
+        raise ValueError(
+            "I2I pipeline requires latents from an encoded image. "
+            "Please pass latents derived from a VAE encode."
         )
-        latents = torch.randn(
-            shape, generator=generator, device=device, dtype=prompt_embeds.dtype
-        )
-        latents = latents * self.scheduler.init_noise_sigma
     else:
         # For I2I we assume latents are already correctly scaled and noised
         latents = latents.to(device=device, dtype=prompt_embeds.dtype)
@@ -361,15 +355,6 @@ class I2IDDPOStableDiffusionPipeline(DefaultDDPOStableDiffusionPipeline):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if (
-            hasattr(self.sd_pipeline.scheduler, "alphas_cumprod")
-            and self.sd_pipeline.scheduler.alphas_cumprod is not None
-        ):
-            # Keep alphas on CPU to avoid device mismatch in custom scheduler code
-            self.sd_pipeline.scheduler.alphas_cumprod = (
-                self.sd_pipeline.scheduler.alphas_cumprod.cpu()
-            )
-
     def __call__(self, *args, **kwargs) -> DDPOPipelineOutput:
         return i2i_pipeline_step(self.sd_pipeline, *args, **kwargs)
 
@@ -434,7 +419,7 @@ class ImageDDPOTrainer(DDPOTrainer):
             with self.autocast():
                 # 2. ENCODE & NOISE
                 init_latents = self.sd_pipeline.vae.encode(input_images).latent_dist.sample()
-                init_latents = init_latents * 0.18215
+                init_latents = init_latents * self.sd_pipeline.vae.config.scaling_factor
 
                 # Align the noise timestep with the first denoising timestep the pipeline will run.
                 self.sd_pipeline.scheduler.set_timesteps(self.config.sample_num_steps, device=self.accelerator.device)
@@ -485,130 +470,3 @@ class ImageDDPOTrainer(DDPOTrainer):
             prompt_image_pairs.append([images, prompts, prompt_metadata])
 
         return samples, prompt_image_pairs
-
-    def step(self, epoch: int, global_step: int):
-            """
-            EXACTLY THE SAME FUNCTION AS DDPOTrainer, BUT WITH IMPROVED, LINEAR
-            WANDB LOGGING
-            
-            Perform a single step of training.
-
-            Args:
-                epoch (int): The current epoch.
-                global_step (int): The current global step.
-
-            Side Effects:
-                - Model weights are updated
-                - Logs the statistics to the accelerator trackers.
-                - If `self.image_samples_callback` is not None, it will be called with the prompt_image_pairs, global_step,
-                and the accelerator tracker.
-
-            Returns:
-                global_step (int): The updated global step.
-
-            """
-            samples, prompt_image_data = self._generate_samples(
-                iterations=self.config.sample_num_batches_per_epoch,
-                batch_size=self.config.sample_batch_size,
-            )
-
-            # collate samples into dict where each entry has shape (num_batches_per_epoch * sample.batch_size, ...)
-            samples = {k: torch.cat([s[k] for s in samples]) for k in samples[0].keys()}
-            rewards, rewards_metadata = self.compute_rewards(
-                prompt_image_data, is_async=self.config.async_reward_computation
-            )
-
-            for i, image_data in enumerate(prompt_image_data):
-                image_data.extend([rewards[i], rewards_metadata[i]])
-
-            if self.image_samples_callback is not None:
-                self.image_samples_callback(prompt_image_data, global_step, self.accelerator.trackers[0])
-
-            rewards = torch.cat(rewards)
-            rewards = self.accelerator.gather(rewards).cpu().numpy()
-            
-            # --- START: Minimal change to address the step gap ---
-            
-            # 1. Log the reward metrics at the current (pre-training) step.
-            # This logs the reward immediately after sampling is complete.
-            self.accelerator.log(
-                {
-                    "reward": rewards,
-                    "epoch": epoch,
-                    "reward_mean": rewards.mean(),
-                    "reward_std": rewards.std(),
-                },
-                step=global_step,
-            )
-            
-            # 2. Advance the global step by the total number of samples collected.
-            # This accounts for the sampling work and eliminates the jump/gap in the WandB step count.
-            # Total samples collected per epoch = sample_batch_size * num_batches * num_processes.
-            total_samples_collected = (
-                self.config.sample_batch_size 
-                * self.config.sample_num_batches_per_epoch
-                * self.accelerator.num_processes
-            )
-            global_step += total_samples_collected
-            
-            # --- END: Minimal change to address the step gap ---
-
-            if self.config.per_prompt_stat_tracking:
-                # gather the prompts across processes
-                prompt_ids = self.accelerator.gather(samples["prompt_ids"]).cpu().numpy()
-                prompts = self.sd_pipeline.tokenizer.batch_decode(prompt_ids, skip_special_tokens=True)
-                advantages = self.stat_tracker.update(prompts, rewards)
-            else:
-                advantages = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
-
-            # ungather advantages;  keep the entries corresponding to the samples on this process
-            samples["advantages"] = (
-                torch.as_tensor(advantages)
-                .reshape(self.accelerator.num_processes, -1)[self.accelerator.process_index]
-                .to(self.accelerator.device)
-            )
-
-            del samples["prompt_ids"]
-
-            total_batch_size, num_timesteps = samples["timesteps"].shape
-
-            for inner_epoch in range(self.config.train_num_inner_epochs):
-                # shuffle samples along batch dimension
-                perm = torch.randperm(total_batch_size, device=self.accelerator.device)
-                samples = {k: v[perm] for k, v in samples.items()}
-
-                # shuffle along time dimension independently for each sample
-                # still trying to understand the code below
-                perms = torch.stack(
-                    [torch.randperm(num_timesteps, device=self.accelerator.device) for _ in range(total_batch_size)]
-                )
-
-                for key in ["timesteps", "latents", "next_latents", "log_probs"]:
-                    samples[key] = samples[key][
-                        torch.arange(total_batch_size, device=self.accelerator.device)[:, None],
-                        perms,
-                    ]
-
-                original_keys = samples.keys()
-                original_values = samples.values()
-                # rebatch them as user defined train_batch_size is different from sample_batch_size
-                reshaped_values = [v.reshape(-1, self.config.train_batch_size, *v.shape[1:]) for v in original_values]
-
-                # Transpose the list of original values
-                transposed_values = zip(*reshaped_values)
-                # Create new dictionaries for each row of transposed values
-                samples_batched = [dict(zip(original_keys, row_values)) for row_values in transposed_values]
-                
-                self.sd_pipeline.unet.train()
-                # Pass the updated global_step to the training function
-                global_step = self._train_batched_samples(inner_epoch, epoch, global_step, samples_batched)
-                # ensure optimization step at the end of the inner epoch
-                if not self.accelerator.sync_gradients:
-                    raise ValueError(
-                        "Optimization step should have been performed by this point. Please check calculated gradient accumulation settings."
-                    )
-
-            if epoch != 0 and epoch % self.config.save_freq == 0 and self.accelerator.is_main_process:
-                self.accelerator.save_state()
-
-            return global_step
