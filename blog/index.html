@@ -109,7 +109,7 @@
 			width: 100%;
 			font-size: 12px;
 			color: #555;
-			padding: 5px 0;
+			padding: 5px 0 5px 10px;
 			box-sizing: border-box;
 			margin-bottom: 8px; /* Space between stacked citations */
 		}
@@ -1489,7 +1489,6 @@
 			const refList = document.querySelector('ol.references');
 			if (!refList) return;
 
-			// 1. Gather reference data
 			const refData = {};
 			const refUrls = {};
 			Array.from(refList.children).forEach(item => {
@@ -1502,50 +1501,101 @@
 				}
 			});
 
-			// 2. Find all citation links in the document order
 			const citations = document.querySelectorAll('a.cite');
 			let citationCount = 0;
-			const citedIDs = new Map(); // id -> number
-			const marginDisplayedIDs = new Set(); // Track IDs already shown in margin
+			const citedIDs = new Map();
+			const marginDisplayedIDs = new Set();
+			const marginNotes = [];
+			const spacing = 8;
 
 			citations.forEach(cite => {
 				const href = cite.getAttribute('href');
-				if (href && href.startsWith('#')) {
-					const id = href.substring(1);
-					
-					// Assign number if first time seen
-					if (!citedIDs.has(id)) {
-						citationCount++;
-						citedIDs.set(id, citationCount);
-					}
-					
-					const num = citedIDs.get(id);
-					cite.textContent = `[${num}]`;
-					
-					// Update link to point to external URL
-					if (refUrls[id]) {
-						cite.setAttribute('href', refUrls[id]);
-						cite.setAttribute('target', '_blank');
-					}
+				if (!href || !href.startsWith('#')) return;
 
-					// Create margin note if not already displayed
-					if (!marginDisplayedIDs.has(id)) {
-						marginDisplayedIDs.add(id);
-						
-						const container = cite.closest('.content-margin-container');
-						if (container) {
-							const rightMargin = container.querySelector('.margin-right-block');
-							if (rightMargin) {
-								const note = document.createElement('div');
-								note.className = 'citation-margin';
-								note.innerHTML = `<span style="font-weight: bold;">${num}</span> ${refData[id]}`;
-								
-								rightMargin.appendChild(note);
-							}
+				const id = href.substring(1);
+				if (!citedIDs.has(id)) {
+					citationCount++;
+					citedIDs.set(id, citationCount);
+				}
+
+				const num = citedIDs.get(id);
+				cite.textContent = `[${num}]`;
+
+				if (refUrls[id]) {
+					cite.setAttribute('href', refUrls[id]);
+					cite.setAttribute('target', '_blank');
+				}
+
+				if (marginDisplayedIDs.has(id)) return;
+				marginDisplayedIDs.add(id);
+
+				const container = cite.closest('.content-margin-container');
+				if (!container) return;
+
+				const rightMargin = container.querySelector('.margin-right-block');
+				if (!rightMargin) return;
+
+				const note = document.createElement('div');
+				note.className = 'citation-margin';
+				note.innerHTML = `<span style="font-weight: bold;">${num}</span> ${refData[id]}`;
+				rightMargin.appendChild(note);
+				marginNotes.push({ cite, note, container, rightMargin });
+			});
+
+			const getBaseHeight = (margin) => {
+				let maxBottom = 0;
+				Array.from(margin.children).forEach(child => {
+					if (child.classList && child.classList.contains('citation-margin')) return;
+					const bottom = child.offsetTop + child.offsetHeight;
+					if (bottom > maxBottom) {
+						maxBottom = bottom;
+					}
+				});
+				return maxBottom;
+			};
+
+			const positionMarginNotes = () => {
+				const perMargin = new Map();
+
+				marginNotes.forEach(({ rightMargin }) => {
+					if (!perMargin.has(rightMargin)) {
+						perMargin.set(rightMargin, {
+							baseHeight: getBaseHeight(rightMargin),
+							lastBottom: null
+						});
+						if (!rightMargin.style.position) {
+							rightMargin.style.position = 'relative';
 						}
 					}
-				}
-			});
+				});
+
+				marginNotes.forEach(({ cite, note, container, rightMargin }) => {
+					const entry = perMargin.get(rightMargin);
+					if (!entry || !container) return;
+
+					const containerRect = container.getBoundingClientRect();
+					const citeRect = cite.getBoundingClientRect();
+					const desiredTop = citeRect.top - containerRect.top;
+
+					const previousBottom = entry.lastBottom === null
+						? entry.baseHeight + spacing
+						: entry.lastBottom + spacing;
+					const top = Math.max(desiredTop, previousBottom);
+
+					note.style.position = 'absolute';
+					note.style.left = '0';
+					note.style.right = '0';
+					note.style.width = '100%';
+					note.style.top = `${top}px`;
+
+					entry.lastBottom = top + note.offsetHeight;
+					rightMargin.style.minHeight = `${Math.max(entry.lastBottom + spacing, entry.baseHeight)}px`;
+				});
+			};
+
+			positionMarginNotes();
+			window.addEventListener('resize', positionMarginNotes);
+			window.addEventListener('load', positionMarginNotes);
 		});
 	</script>
 </body>
