@@ -23,8 +23,10 @@ You can run the trainer in two modes using the `--mode` argument:
 You can choose the dataset using the `--dataset` argument:
 - `cod` (default): Use the COD10K camouflage dataset.
 - `cifar10-c`: Use the CIFAR-10-C corruption dataset. Requires `--corruption` and `--severity` arguments.
+- `tiny-imagenet-c`: Use the Tiny-ImageNet-C corruption dataset. Requires `--corruption` and `--severity` arguments.
+- `imagenet-c`: Use the ImageNet-C corruption dataset. Requires `--corruption` and `--severity` arguments.
 
-> **Note**: Currently, `eval_classifier` mode only supports `cifar10-c` and `tiny-imagenet-c`, not `cod`.
+> **Note**: `eval_classifier` mode supports `cifar10-c`, `tiny-imagenet-c`, and `imagenet-c`, but not `cod`.
 
 During training or at the end, upload checkpoints with:
 
