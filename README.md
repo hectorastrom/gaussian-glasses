@@ -1,4 +1,4 @@
-# Diffusion Lens
+# Gaussian Glasses
 Making hidden objects classifier-legible through diffusion.
 
 ## Setup

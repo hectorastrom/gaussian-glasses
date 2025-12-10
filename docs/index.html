@@ -453,29 +453,33 @@
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 			<h1>Introduction</h1>
+	
 			Since the emergence of Denoising Diffusion Probabilistic Models
 			(DDPMs), generative vision has evolved from simple synthesis to
-			precise, instructional editing <a href="#ref_ho" class="cite"></a> <a href="#ref_ho_cfg" class="cite"></a>. Models like
+			precise, instructional editing <a href="#ref_ho" class="cite"></a> <a href="#ref_ho_cfg" class="cite"></a>.
+			Models like
 			InstructPix2Pix <a href="#ref_brooks" class="cite"></a> and
 			ControlNet <a href="#ref_zhang" class="cite"></a> have demonstrated that diffusion
 			priors can manipulate
-			image semantics with remarkable fidelity, effectively
-			"understanding" the contents of a scene to modify it.
+			image semantics with remarkable fidelity, often producing edits that
+			appear scene-consistent to humans.
+	
 			<br><br>
-			
+
 			This progress motivates a central question in robust computer
 			vision: <b>can a diffusion prior be used as a label-preserving
-			semantic denoiser for recognition?</b> Concretely, we ask whether
+				semantic denoiser for recognition?</b> Concretely, we ask whether
 			diffusion-based reconstruction can restore discriminative structure
 			in ambiguous or corrupted inputs, improving downstream
 			classification by transforming the <i>data</i> rather than modifying
 			the classifier.
+	
 			<br><br>
-			
+	
 			In this work, we investigate whether Stable Diffusion v1.5 <a href="#ref_rombach" class="cite"></a>,
 			optimized through both Supervised Fine-Tuning (SFT) and
 			Reinforcement Learning (DDPO <a href="#ref_black" class="cite"></a>), can improve the zero-shot
-			classification performance of CLIP <a href="#ref_radford" class="cite"></a> on two distinct domains of visual
+			classification performance of CLIP <a href="#ref_radford" class="cite"></a> on two domains of visual
 			degradation:
 			<ul>
 				<li>
@@ -484,41 +488,77 @@
 					where the signal (animal) is hidden or camouflaged.
 				</li>
 				<li>
-					<strong>Algorithmic Corruption:</strong> The CIFAR-10-C and ImageNet-C datasets <a href="#ref_hendrycks" class="cite"></a>, representing
-					algorithmic noise and blur degradations to CIFAR and ImageNet images, which we only explore in preliminary experiments
-					that did not reach stable performance within our compute budget.
+					<strong>Algorithmic Corruption (Preliminary):</strong> The CIFAR-10-C and ImageNet-C datasets <a
+						href="#ref_hendrycks" class="cite"></a>,
+					representing algorithmic noise and blur degradations. We began extending our pipeline to these settings
+					near the end of the project,
+					but did not reach stable, interpretable behavior within our compute budget and timeline.
 				</li>
 			</ul>
-			
-			We report a negative result on COD10K: our SFT- and RL-based attempts do not yield a statistically significant
-			improvement over the base CLIP accuracy. For CIFAR-10-C, our experiments remained preliminary — the model did not
-			produce stable or interpretable generations within the project timeline — so we do not draw quantitative conclusions
-			for that setting.
-			
-			To read more about our hypotheses for the failure modes, refer to
-			the <a href="#discussion_failure_analysis">discussion.</a>
-
-			
+	
+			For COD10K, we ran full evaluations and did not observe a statistically significant improvement over the base
+			CLIP baseline using our SFT-
+			or RL-adapted diffusion models. We interpret this as evidence that, under camouflage-driven ambiguity, diffusion
+			editing tends to trade
+			semantic faithfulness for plausible completion.
+	
 			<br><br>
-
-			Given the substantial computational complexity and latency
-			introduced by the diffusion loop, we conclude that, for our
-			completed COD10K experiments — and for preliminary CIFAR-10-C runs
-			that failed to yield stable improvements — generative semantic
-			completion is an ineffective approach for improving robustness to
-			visually degraded inputs compared to standard classifier baselines
-			on our setup (SD 1.5 + LoRA + CLIP, COD10K).
-
+	
+			<h2>Roadmap of Our Approach</h2>
+			<ol>
+				<li>
+					<strong>Initial plan: RL for black-box optimization.</strong>
+					We first trained Stable Diffusion with DDPO so we would not need access to the internals of the vision
+					classifier, enabling optimization
+					against arbitrary (potentially non-differentiable) recognition systems.
+				</li>
+				<li>
+					<strong>Realization: RL did not translate into accuracy gains.</strong>
+					While reward could be made to increase, the resulting diffusion-edited images did not close the gap to
+					the frozen CLIP baseline on COD10K.
+				</li>
+				<li>
+					<strong>Benchmark: SFT to reduce variance and test the core idea.</strong>
+					We then implemented supervised fine-tuning by backpropagating through the diffusion pipeline into a
+					frozen CLIP classifier, removing policy
+					gradient variance and testing whether "diffusion as a preprocessor" can work when gradients are
+					available.
+				</li>
+				<li>
+					<strong>Validation: stop chasing peak accuracy and validate the pipeline.</strong>
+					After SFT also fell short of the CLIP baseline, we did not attempt to maximize accuracy via alternate
+					classifiers or extensive model selection
+					(not the focus of this work). Instead, we focused on careful reward-function design, hyperparameter
+					sweeps, and correctness checks of our
+					ImageDDPO implementation.
+				</li>
+				<li>
+					<strong>Pivot: corruption tasks are better matched to denoising.</strong>
+					After substantial effort on COD10K, we began extending the same machinery to corruption benchmarks
+					(CIFAR-10-C and ImageNet-C), where the
+					degradation more closely resembles the denoising bias of diffusion models.
+				</li>
+				<li>
+					<strong>Constraint: ran out of time for stable corruption results.</strong>
+					Those corruption experiments remained preliminary by the end of the project, so we treat them as a
+					motivated direction for future work rather
+					than a completed empirical claim.
+				</li>
+			</ol>
+	
+			For hypotheses about why this approach fails under camouflage-driven ambiguity, refer to the
+			<a href="#discussion_failure_analysis">Failure Analysis</a>.
+	
 			<br><br>
-			All code for this experiement is available <a
-			href="https://github.com/hectorastrom/diffusion-lens">here.</a>
+	
+			All code for this experiment is available <a href="https://github.com/hectorastrom/diffusion-lens">here.</a>
 			For readers to build on this work, we also provide a standalone
-			package implementing ImageDDPO available with <code>pip
-			install imageddpo</code>.
+			package implementing ImageDDPO available with <code>pip install imageddpo</code>.
 		</div>
 		<div class="margin-right-block">
 		</div>
 	</div>
+
 
 	<div class="content-margin-container" id="preliminaries">
 		<div class="margin-left-block"></div>
