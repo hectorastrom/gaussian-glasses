@@ -1019,8 +1019,15 @@
 
 					For CIFAR-10-C and ImageNet-C, a
 					lightweight supervised classifier (e.g., ResNet-18/50) would
-					have been better matched to the label distributions, but time
-					constraints prevented a full comparison.
+					have been better matched to the label distributions.
+					However, these vision models require training a final classifier
+					layer for each dataset.
+					To match our demonstration with CLIP, we would train the
+					classifier from the original non-corrupted training set
+					(CIFAR-10 or ImageNet).
+					This would then allow us to evaluate the diffusion model's
+					ability to improve classification accuracy on corrupted inputs.
+					However, time and resource constraints prevented a full comparison.
 				</li>
 			
 				<li>
