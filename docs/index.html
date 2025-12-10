@@ -1209,7 +1209,7 @@
 				<tbody>
 					<tr style="border-bottom: 1px solid #ddd;">
 						<td style="padding: 10px;">Learning rate</td>
-						<td style="padding: 10px; text-align: center;">~1e-4</td>
+						<td style="padding: 10px; text-align: center;">1e-4</td>
 						<td style="padding: 10px; text-align: center;">1e-4</td>
 					</tr>
 					<tr style="border-bottom: 1px solid #ddd;">
@@ -1224,8 +1224,9 @@
 					</tr>
 					<tr style="border-bottom: 1px solid #ddd;">
 						<td style="padding: 10px;">Batch size</td>
-						<td style="padding: 10px; text-align: center;">~256 per gradient update</td>
-						<td style="padding: 10px; text-align: center;">Effective 16 (2 x 8 grad accumulation)</td>
+						<td style="padding: 10px; text-align: center;">Effective
+						256 per gradient update (using gradient accumulation)</td>
+						<td style="padding: 10px; text-align: center;">Effective 16 per gradient update</td>
 					</tr>
 					<tr style="border-bottom: 1px solid #ddd;">
 						<td style="padding: 10px;">Epochs / training length</td>
@@ -1335,7 +1336,7 @@
 			</p>
 
 
-			<h4>Results: SFT-Trained Model</h4>
+			<h3 id="results_sft">Results: SFT-Trained Model</h3>
 			<p>
 				This model was trained for 30 epochs using the supervised fine-tuning method described above.
 				This model uses empty prompts for the diffusion model, which we discuss below to perform with
@@ -1665,62 +1666,57 @@
 	<div class="content-margin-container" id="results_rl">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h4 id="results_rl">Results: RL-Trained Model</h4>
+			<h3>Results: RL-Trained Model</h3>
+	
 			<p>
-				The results reported in <a href="#table_1">Table 1</a> were evaluated using the LoRA
-				checkpoint from the green run in <a href="#figure_10">Figure
-				10</a>. While this run ostensibly exhibited positive reward, the
-				overall test performance is poor because reward is based on
-				relative increase in logits for the desired class, rather than
-				comparison to base CLIP accuracy.  
+				The RL results summarized in <a href="#table_1">Table 1</a> use
+				the LoRA checkpoint from the green run in <a
+				href="#figure_10">Figure 10</a>. Although this run shows steady
+				reward improvement, the reward signal measures <em>relative</em>
+				logit increase after editing rather than absolute classification
+				correctness. As a consequence, rising reward does not translate
+				into improved top-k accuracy when evaluated against the CLIP
+				baseline.
 			</p>
-
+	
 			<p>
-				We performed extensive hyperparameter tuning and extended
-				training runs (over 100 runs total). However, for the camouflage
-				task (where most of our effort was focused), we were not able to
-				exceed the results presented in <a href="#table_1">Table 1</a>. 
-
+				We conducted extensive hyperparameter sweeps and over one
+				hundred training runs across different dataset sizes, prompt
+				regimes, and noise strengths. Despite these efforts, RL did not
+				yield accuracy improvements on the camouflage task. This holds
+				even for long training horizons, where reward continues climbing
+				but the edited images do not meaningfully aid CLIP in
+				identifying the camouflaged animal.
 			</p>
-
-			<!-- TODO: I want to put these hyperparameters into a neater table,
-			for RL and for SFT best runs. Would this go in the results section? -->
+	
 			<p>
-				Most successful hyperparameter ranges tended to be:
-				<ul>
-					<li>Learning rate about 1e-4</li>
-					<li>Noise strength around 0.2-0.4</li>
-					<li>Guidance scale at 0 for null prompts, or 7.0
-					otherwise</li>
-					<li>Batch size per gradient update around 256</li>
-					<li>Epochs up to 500, but reward continued climbing the
-					entire time</li>
-					<li>Train dataset size: validation performance improves with
-					size, but reward climb is slower as the model has to learn
-					more about the dataset. In most of our testing for RL we
-					kept dataset size between 256 and 1028.</li>
-				</ul>
-
+				Overall, the RL pipeline successfully optimized its own reward
+				function but did not produce diffusion edits that improved
+				classification performance on COD10K, indicating a misalignment
+				between the reward and the downstream objective.
 			</p>
-
 		</div>
 		<div class="margin-right-block"></div>
 	</div>
-
+	
 	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 			<img src="./images/rl_reward_graph.png" style="width: 80%; height: auto;" />
-			<p class="heavy-caption">Comparing Reward Progress of Different
-			Training Configurations</p>
+			<p class="heavy-caption">Reward Progress Across Training Configurations</p>
 		</div>
-		<div class="margin-right-block"><strong>Figure 10</strong><br /><br
-		/>With only a single image and ORACLE prompt, the blue run sanity-checks
-		our training setup's ability to overfit. As we remove these 'training
-		wheels', these runs demonstrate that reward climbing is much slower
-		with larger training datasets (red run) and null prompts (green
-		run).</div>
+		<div class="margin-right-block">
+			<strong>Figure 10</strong><br /><br />
+			The blue run overfits a single image using an ORACLE prompt,
+			confirming that the RL pipeline and reward propagation behave as
+			expected. Removing these 'training wheels' slows reward improvement:
+			the red run uses a larger dataset, and the green run removes text
+			guidance entirely. These settings make the optimization problem
+			substantially harder, and rising reward under these conditions does
+			not correlate with improved downstream accuracy.
+		</div>
 	</div>
+
 
 	<div class="content-margin-container" id="results_cifar">
 		<div class="margin-left-block"></div>
@@ -1739,7 +1735,7 @@
 			enables stronger reward signals via CIFAR- or ImageNet-adapted vision
 			classifiers, rather than relying on an open-vocabulary CLIP model.
 			In our limited testing, reward was consistently climbing at a slow
-			rate of \(\sim 4e-4\) per image sampled. 
+			rate of \(4e-4\) per image sampled. 
 		</div>
 		<div class="margin-right-block">
 		</div>
