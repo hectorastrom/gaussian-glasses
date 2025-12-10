@@ -217,9 +217,15 @@
 		}
 
 		h2 {
-			font-size: 18px;
+			font-size: 20px;
 			margin-top: 12px;
 			margin-bottom: 6px;
+		}
+
+		h3 {
+			font-size: 16px;
+			margin-top: 10px;
+			margin-bottom: 4px;
 		}
 
 		table.header {
@@ -446,7 +452,8 @@
 		</div>
 		<div class="margin-right-block"><strong id="figure_1">Figure 1</strong> <br><br>With
 		only a single image, Stable Diffusion trained with ImageDDPO can quickly
-		overfit to generate its best idea of the prototypical 'batfish'.</div>
+		overfit to generate the prototypical 'batfish' -- if that's what you'd
+		call that thing.</div>
 	</div>
 
 	<div class="content-margin-container" id="intro">
@@ -466,7 +473,7 @@
 	
 			<br><br>
 
-			This progress motivates a central question in robust computer
+			This progress motivates a central question in computer
 			vision: <b>can a diffusion prior be used as a label-preserving
 				semantic denoiser for recognition?</b> Concretely, we ask whether
 			diffusion-based reconstruction can restore discriminative structure
@@ -671,7 +678,7 @@
 
 			The HuggingFace TRL library <a href="#ref_trl_ddpo" class="cite"></a>
 			provides a (now
-			deprecated) DDPOTrainer
+			deprecated) <code>DDPOTrainer</code> class to implement this learning algorithm.
 			class to implement this learning algorithm. At a high level it works
 			as follows:
 			<ol>
@@ -935,6 +942,10 @@
 		<div class="margin-right-block"></div>
 	</div>
 
+	<!-- ========================= -->
+	<!-- Methods (Restructured)    -->
+	<!-- ========================= -->
+	
 	<div class="content-margin-container" id="methods">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
@@ -942,29 +953,86 @@
 		</div>
 		<div class="margin-right-block"></div>
 	</div>
-
+	
 	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 			<img src="./images/train_pipelines.png" style="width: 80%; height: auto;" />
 			<p class="heavy-caption">SFT and RL training pipelines</p>
 		</div>
-		<div class="margin-right-block"><strong>Figure 5</strong><br /><br />In the SFT pipeline, gradient updates are free to backpropagate through a
-		frozen classifier. Conversely, in RL parameter updates are faciliated
-		through DDPO, where the reward is a weighted combination of classifier
-		confidence and perceptual drift. </div>
+		<div class="margin-right-block">
+			<strong>Figure 5</strong><br /><br />
+			In SFT, we backpropagate through the diffusion pipeline into a frozen classifier.
+			In RL, parameter updates are facilitated through DDPO, where the reward is based on
+			classifier logit improvement with an optional penalty on perceptual drift.
+		</div>
 	</div>
-
+	
 	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h2 id="methods_imageddpo">ImageDDPO</h2>
-			
+	
+			<!-- ===================================================== -->
+			<!-- 1) Design Choices (Universal vs RL-specific)           -->
+			<!-- ===================================================== -->
+			<h2 id="methods_design">Design Choices</h2>
+	
+			<h3>Universal Design Choices</h3>
+			<ol>
+				<li>
+					<strong>Vision Backbone (CLIP).</strong>
+					We selected CLIP as the downstream classifier because its open-vocabulary interface allows a single
+					model
+					to evaluate COD10K without retraining. This enabled rapid experimentation with prompt strategies for
+					both
+					evaluation and generation. We used <code>openai/clip-vit-base-patch16</code> because its smaller patch
+					size
+					improved reward sensitivity on camouflaged scenes.
+				</li>
+	
+				<li>
+					<strong>Generative Backbone (Stable Diffusion 1.5).</strong>
+					We adopted SD 1.5 for its balance of generation quality and inference speed, and because it integrates
+					cleanly into the existing DDPO codepath and our img2img adaptation.
+				</li>
+	
+				<li>
+					<strong>LoRA Adapter.</strong>
+					Following new promising work on the performance of LoRA, <a href="#ref_schulman_lora" class="cite"></a>, we fine-tuned the UNet using a LoRA adapter to keep training lightweight and isolate learned behavior to
+					a small set of parameters. This was essential for iteration speed across both RL and SFT.
+				</li>
+			</ol>
+	
+			<h3>RL-Specific Design Choices</h3>
+			<ol>
+				<li>
+					<strong>Reward Form.</strong>
+					We evaluated several reward formulations and found that logit-difference rewards were the most stable.
+					Probability-based rewards were too flat to guide learning, and margin-style rewards were unstable in
+					scale.
+				</li>
+	
+				<li>
+					<strong>Perceptual Drift Penalty.</strong>
+					We used LPIPS to penalize perceptual drift between the input and reconstructed output. In practice, this
+					penalty was often too aggressive early in training, pushing rewards negative before useful behavior
+					emerged.
+				</li>
+			</ol>
+	
+			<!-- ===================================================== -->
+			<!-- 2) RL Methods + ImageDDPO                               -->
+			<!-- ===================================================== -->
+			<h2 id="methods_rl">RL Methods (ImageDDPO)</h2>
+	
+			<h3 id="methods_imageddpo">ImageDDPO</h3>
+	
 			<p>
-				ImageDDPO extends DDPO to the img2img setting by optimizing a diffusion policy that edits an input image instead of
+				ImageDDPO extends DDPO to the img2img setting by optimizing a diffusion policy that edits an input image
+				instead of
 				generating purely from noise.
 			</p>
-			
+	
 			<p><strong>MDP and Objective Changes</strong></p>
 			<ul>
 				<li>
@@ -988,7 +1056,7 @@
 					so DDPO’s log-prob and PPO machinery apply unchanged over this truncated chain.
 				</li>
 			</ul>
-			
+	
 			<p><strong>Implementation Changes from DDPO</strong></p>
 			<ul>
 				<li>
@@ -1008,292 +1076,208 @@
 					\( (\text{init_images},\, \text{text_prompts},\, \text{metadata}) \),
 					and reward functions are upgraded to
 					\( r(x_0, c) = r(x_0, \text{init_image}, \text{text_prompt}, \text{metadata}) \),
-					enabling image-conditioned objectives (e.g. "make the animal more detectable").
+					enabling image-conditioned objectives.
 				</li>
 			</ul>
-			
-			<h2 id="methods_rl">RL Methods</h2>
+	
+			<h3>Reward and Training Loop</h3>
 			<p>
-				Our reinforcement learning setup extends the <code>ImageDDPOTrainer</code> with three
-				task-specific modifications. First, we define a reward function equal to the logit
-				difference between the optimized and original images, which yielded the most stable
-				gradient signal compared to margin-based or probability-based alternatives. Second,
-				we integrate distributed training via <code>accelerate</code>, allowing rollouts, reward
-				evaluation, and PPO updates to run efficiently across devices. Third, we add a
-				validation hook that periodically reconstructs diffusion intermediates to monitor
-				whether training meaningfully affects the denoising trajectory;
-				<a href="#figure_1">Figure 1</a> shows an
-				example intermediate.
+				Our reinforcement learning setup extends the <code>ImageDDPOTrainer</code> with three task-specific
+				modifications.
+				First, we define a reward equal to the logit difference between the edited and original images for the
+				ground-truth
+				class, which was more stable than probability- or margin-based alternatives. Second, we integrate
+				distributed
+				training via <code>accelerate</code>, allowing rollouts, reward evaluation, and PPO updates to run
+				efficiently.
+				Third, we add a validation hook that periodically reconstructs diffusion intermediates to monitor whether
+				training
+				meaningfully changes the denoising trajectory; <a href="#figure_1">Figure 1</a> shows an example
+				intermediate.
 			</p>
-			
+	
+			<!-- ===================================================== -->
+			<!-- 3) SFT (Loss + Backprop + Shortened denoising loop)     -->
+			<!-- ===================================================== -->
+			<h2 id="methods_sft">Supervised Fine-Tuning (SFT)</h2>
+	
 			<p>
-				Beyond these changes, the training loop remains identical: once images were
-				preprocessed into the COD10K format, the same <code>ImageDDPOTrainer</code> was used to
-				fine-tune Stable Diffusion on CIFAR-10-C and ImageNet-C. Because both datasets
-				provide plain class labels, the reward definition, sampling procedure, and PPO
-				update remain unchanged. CIFAR-10-C’s smaller spatial resolution and 10-class
-				structure make optimization comparatively easy, while ImageNet-C’s 1000-class
-				label space introduces a noisier reward landscape that demands more rollouts to
-				achieve consistent improvement.
+				Our SFT method trains a LoRA adapter on the UNet component of Stable Diffusion <a href="#ref_rombach"
+					class="cite"></a>
+				by directly minimizing CLIP <a href="#ref_radford" class="cite"></a> classification loss. Unlike RL, SFT
+				maintains the
+				full computational graph through the diffusion pipeline and backpropagates through the VAE decoder and
+				frozen CLIP
+				classifier to obtain exact gradients with respect to the classification objective. To keep the sampling path
+				differentiable, we use deterministic DDIM sampling (\( \eta = 0 \)).
 			</p>
-
-			<h2 id="methods_design">Design Choices</h2>
-
+	
+			<h3>Architecture</h3>
 			<p>
-				The core design choices we confronted early in the development of
-				this work were:
+				The SFT forward pass is:
 			</p>
-			<ol>
-				<li>
-					<strong>Vision Backbone (CLIP).</strong>
-					We selected CLIP as the downstream classifier because its
-					open-vocabulary interface allows a single model to evaluate
-					any dataset without retraining. This enabled rapid
-					experimentation with prompt engineering for both evaluation
-					and generation, and aligned naturally with Stable
-					Diffusion’s text-conditioning pipeline. Specifically, we used
-					<code>openai/clip-vit-base-patch16</code> because its smaller
-					patch size measurably improved accuracy and reward sensitivity
-					on camouflaged scenes. 
-					
-					<br><br>
-
-					For CIFAR-10-C and ImageNet-C, a
-					lightweight supervised classifier (e.g., ResNet-18/50) would
-					have been better matched to the label distributions.
-					However, these vision models require training a final classifier
-					layer for each dataset.
-					To match our demonstration with CLIP, we would train the
-					classifier from the original non-corrupted training set
-					(CIFAR-10 or ImageNet).
-					This would then allow us to evaluate the diffusion model's
-					ability to improve classification accuracy on corrupted inputs.
-					However, time and resource constraints prevented a full comparison.
-				</li>
-			
-				<li>
-					<strong>Generative Backbone (Stable Diffusion 1.5).</strong>
-					We adopted SD 1.5 for its balance of generation quality and
-					inference speed — both essential in an RL loop that
-					repeatedly samples full diffusion trajectories. SD 1.5 also
-					integrates cleanly into the existing
-					<code>DDPOTrainer</code> codepath, minimizing engineering
-					overhead.
-				</li>
-			
-				<li>
-					<strong>Reward Function.</strong>
-					We evaluated several formulations and found that only
-					logit-difference rewards produced stable, monotonic
-					learning. Probability-based rewards were too flat to guide
-					improvement, and margin-style rewards exhibited volatile
-					scale. Logit change provided a self-referential signal with
-					consistent magnitude across samples.
-				</li>
-			
-				<li>
-					<strong>Reconstruction Metric.</strong>
-					We used LPIPS to quantify perceptual drift between the input
-					and reconstructed output. Compared to pixelwise MSE or
-					KL-based metrics, LPIPS more reliably tracks semantic
-					preservation — the quantity we most wanted to penalize when
-					encouraging classification-helpful edits. 
-					
-					<br><br>
-					Empirically, however, this penalty was too aggressive:
-					because we never actually reached a reward-hacking regime,
-					the LPIPS term dominated early updates and drove rewards
-					sharply negative before useful behavior could emerge.
-					<br><br>
-				</li>
-			</ol>
-
-
-
-
-			<h2 id="methods_sft">Supervised Fine-Tuning</h2>
-			<p>
-				Our initial approach used RL via DDPO, which provides a general framework for optimizing 
-				diffusion models with respect to arbitrary reward functions, including non-differentiable 
-				objectives and black-box classifiers. However, our RL results did not show significant 
-				improvement over baselines, motivating us to explore a supervised fine-tuning (SFT) method 
-				that directly backpropagates gradients through the entire diffusion pipeline. This approach 
-				eliminates the variance inherent in policy gradient methods by computing exact gradients 
-				through the differentiable components of the system. We pursued SFT because our specific 
-				setup, where CLIP classification is fully differentiable, allows us to compute exact 
-				gradients, potentially leading to more stable training and faster convergence than policy 
-				gradient methods. While RL remains the more general solution that can handle 
-				non-differentiable objectives, SFT offers a lower-variance alternative when the reward 
-				function is differentiable.
-			</p>
-
-			<p>
-			Our SFT method trains a LoRA adapter on the UNet component of Stable Diffusion
-			<a href="#ref_rombach" class="cite"></a> to optimize CLIP <a href="#ref_radford" class="cite"></a> classification accuracy. The key difference from RL is that 
-			SFT requires maintaining the full computational graph through the entire pipeline: we 
-			backpropagate gradients not only through the UNet (as RL does) but also through the VAE 
-			decoder and frozen CLIP classifier to compute exact gradients with respect to the 
-			classification loss. This requires using deterministic DDIM sampling (η = 0) to maintain 
-			gradient flow, whereas RL can use stochastic sampling and only needs gradients through 
-			the UNet to compute policy gradients. Additionally, SFT requires a differentiable objective 
-			function (CLIP's classification loss), while RL can optimize any reward signal, including 
-			non-differentiable ones.
-			</p>
-
-			<h3>Architecture and Pipeline</h3>
-			<p>
-				The training pipeline follows this forward pass:
-			</p>
-
+	
 			$$
 			\begin{gathered}
 			\text{Image} \to \text{VAE Encode} \to \text{Add Noise}
-			\to \text{Denoise w/ UNet (LoRA)} \to \text{VAE Decode} \to \text{CLIP} \to \text{Classification Loss}
+			\to \text{Denoise w/ UNet (LoRA)} \to \text{VAE Decode} \to \text{CLIP} \to \text{Cross-Entropy Loss}
 			\end{gathered}
 			$$
-
+	
 			<p>
-				We freeze all components except the LoRA parameters applied to the UNet's
-				attention layers. Specifically, LoRA adapters are applied to the query, key,
-				value, and output projection matrices (<code>to_q</code>, <code>to_k</code>,
-				<code>to_v</code>, <code>to_out.0</code>) in all cross-attention and
-				self-attention blocks. We use a LoRA rank of 4 and alpha of 4, resulting in
-				only a small fraction of the UNet's parameters being trainable (less than 1% of the full model). The VAE
-				encoder and decoder, text encoder,
-				and CLIP classifier are all frozen, ensuring that gradients flow only through
-				the LoRA-adapted UNet.
+				We freeze all components except the LoRA parameters applied to the UNet's attention layers. Specifically,
+				LoRA
+				adapters are applied to <code>to_q</code>, <code>to_k</code>, <code>to_v</code>, and <code>to_out.0</code>
+				in
+				both self-attention and cross-attention blocks. We use a LoRA rank of 4 and alpha of 4, making less than 1%
+				of
+				the UNet parameters trainable.
 			</p>
-
+	
 			<h3>Differentiable Denoising Loop</h3>
 			<p>
-				The core of our approach is a fully differentiable denoising loop implemented
-				using DDIM sampling with \( \eta = 0 \) (deterministic mode). This ensures
-				that the reverse diffusion process is deterministic and maintains gradient
-				flow throughout all denoising steps. For each training sample:
+				We run an image-to-image (I2I) denoising loop by encoding the input image into latents, adding noise up to a
+				start
+				timestep determined by <code>noise_strength</code>, then denoising deterministically for the remaining steps
+				using DDIM
+				(\( \eta = 0 \)). This preserves gradient flow across all denoising operations while allowing targeted edits
+				that remain
+				anchored to the input.
+			</p>
+	
+			<h3>Loss</h3>
+			<p>
+				After decoding, we classify the edited image with CLIP and minimize cross-entropy between predicted logits
+				and the
+				ground-truth class label. We pre-compute CLIP text embeddings for each class using prompts of the form
+				"An image of {class_name}" and compute logits using CLIP's temperature-scaled cosine similarity.
+			</p>
+	
+			<!-- ===================================================== -->
+			<!-- 4) Experiments (Universal) + NEW Hyperparameter Table   -->
+			<!-- ===================================================== -->
+			<h2 id="methods_experiments">Experiments</h2>
+	
+			<p>
+				In all our experiments we fine-tune only UNet LoRA weights and keep the VAE and text encoder frozen. We
+				explore both
+				empty prompts and task prompts for diffusion conditioning. For SFT, we use deterministic DDIM sampling to
+				preserve
+				differentiability. For RL, we sample rollouts and perform PPO-style updates using the logit-difference
+				reward.
 			</p>
 
-			<ol>
-				<li>
-					<strong>VAE Encoding:</strong> The input image is encoded into the latent
-					space using the frozen VAE encoder, producing latents \( z_0 \).
-				</li>
-				<li>
-					<strong>Noise Injection:</strong> We apply image-to-image (I2I) conditioning
-					by adding noise to the latents. Given a noise strength parameter
-					\( \alpha \) (typically 0.4), we select a timestep \( t_{\text{start}} \)
-					corresponding to the \( (1 - \alpha) \) quantile of the diffusion schedule,
-					then add noise: \( z_{t_{\text{start}}} = \sqrt{1-\beta_t} z_0 + \sqrt{\beta_t} \epsilon \),
-					where \( \epsilon \sim \mathcal{N}(0, I) \).
-				</li>
-				<li>
-					<strong>Differentiable Denoising:</strong> Starting from \( z_{t_{\text{start}}} \),
-					we run a deterministic DDIM denoising loop for the remaining
-					\( \alpha \times \text{num_steps} \) steps. At each timestep \( t \), the UNet
-					predicts noise \( \epsilon_\theta(z_t, c, t) \), where \( c \)
-					is the text conditioning. We optionally apply classifier-free guidance (CFG)
-					by computing both unconditional and conditional predictions and combining
-					them: \( \epsilon_{\text{pred}} = \epsilon_{\text{uncond}} + \gamma(\epsilon_{\text{cond}} -
-					\epsilon_{\text{uncond}}) \),
-					where \( \gamma \) is the guidance scale. The DDIM step update is:
-				</li>
-			</ol>
-
-			$$ z_{t-1} = \sqrt{\frac{\alpha_{t-1}}{\alpha_t}} z_t + \left( \sqrt{1-\alpha_{t-1}} -
-			\sqrt{\frac{\alpha_{t-1}}{\alpha_t}} \sqrt{1-\alpha_t} \right) \epsilon_{\text{pred}} $$
-
+			<h3>Prompts</h3>
 			<p>
-				All operations in this loop maintain gradient flow, allowing
-				backpropagation through the entire sequence of denoising steps.
+				We experiment with three prompt strategies for conditioning the diffusion model during training and evaluation:
+				(1) <strong>ORACLE</strong>, where the prompt contains the ground-truth label (e.g., "A clear photo of {class}"),
+				which serves
+				as an upper bound but often induces reward-hacking behavior by generating images that no longer resemble the input;
+				(2) <strong>custom fixed task prompts</strong>, which provide a consistent instruction across all samples; and
+				(3) <strong>empty prompts</strong>, which remove text guidance entirely and test whether the model can learn edits
+				solely from
+				the image-conditioned objective.
 			</p>
-
-			<h3>Classification Loss and Training</h3>
+			
 			<p>
-				After denoising, the latents are decoded back to pixel space using the frozen
-				VAE decoder, producing generated images \( \hat{x} \). These images are then
-				preprocessed for CLIP (resized to 224×224 and normalized using CLIP's
-				statistics) and passed through the frozen CLIP vision encoder to obtain
-				normalized image features \( f_{\text{img}} \).
+				For the custom fixed prompts, we use:
 			</p>
-
-			<p>
-				We pre-compute normalized text embeddings \( f_{\text{text}}^{(i)} \)
-				for all classes in the dataset using prompts "An image of {class_name}" for each class.
-				Classification logits are computed as:
-			</p>
-
-			$$ \text{logits}_i = \exp(\tau) \times (f_{\text{img}} \cdot f_{\text{text}}^{(i)}) $$
-
-			<p>
-				where \( \tau \) is CLIP's learned temperature parameter. We minimize the
-				cross-entropy loss between these logits and the ground-truth class labels
-				using standard backpropagation.
-			</p>
-
-			<h3>Experiments</h3>
-			<p>
-				Training uses mixed precision (FP16 for diffusion components, FP32 for CLIP)
-				and gradient accumulation to achieve an effective batch size of 16 (batch
-				size 2 × 8 accumulation steps). We use the AdamW optimizer with a learning
-				rate of 1e-4. The diffusion process uses 20 total steps with a noise strength
-				of 0.4, meaning we denoise only the final 40% of the diffusion schedule.
-				We use a guidance scale of 1.0 for all the SFT experiments.
-				This I2I approach allows the model to make targeted modifications to the
-				input image while preserving its overall structure.
-			</p>
-
-			<p>
-				We experiment with different prompt strategies: (1) ORACLE mode,
-				where prompts use the ground-truth class label (e.g., "A clear photo of {class}"),
-				(2) custom fixed prompts, and (3) empty prompts. The ORACLE setting provides
-				an upper bound on performance by giving the model perfect semantic information,
-				while empty prompts test whether the model can learn to improve classification
-				without explicit text guidance.
-			</p>
-
-			<p>
-				For the custom fixed prompts, we use the following prompts:
 			<ul>
-				<li>"De-camouflage the animal" — a direct semantic instruction to remove camouflage effects, testing
-					whether explicit task guidance helps preserve the correct object.</li>
-				<li>"Increase edge sharpness and contrast of the camouflaged animal" — focuses on low-level visual
-					features rather than high-level semantics, testing whether edge enhancement alone improves
-					classification.</li>
-				<li>"Enhance the visibility of the camouflaged animal" — a general instruction that leaves the method of
-					enhancement unspecified, testing whether vague guidance is sufficient.</li>
+				<li>"De-camouflage the animal" — a direct semantic instruction to remove camouflage effects.</li>
+				<li>"Increase edge sharpness and contrast of the camouflaged animal" — emphasizes low-level visual features rather
+					than semantics.</li>
+				<li>"Enhance the visibility of the camouflaged animal" — a general instruction that leaves the enhancement mechanism
+					unspecified.</li>
 			</ul>
-			</p>
 
+	
+			<h3>Hyperparameter Ranges</h3>
+			<p>
+				The following table summarizes the hyperparameter ranges that produced the most stable training behavior in
+				our runs.
+				These are reported to make the experimental search space explicit and reproducible.
+			</p>
+	
+			<table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+				<thead>
+					<tr style="border-bottom: 2px solid #333;">
+						<th style="padding: 10px; text-align: left;">Hyperparameter</th>
+						<th style="padding: 10px; text-align: center;">RL (ImageDDPO)</th>
+						<th style="padding: 10px; text-align: center;">SFT</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr style="border-bottom: 1px solid #ddd;">
+						<td style="padding: 10px;">Learning rate</td>
+						<td style="padding: 10px; text-align: center;">~1e-4</td>
+						<td style="padding: 10px; text-align: center;">1e-4</td>
+					</tr>
+					<tr style="border-bottom: 1px solid #ddd;">
+						<td style="padding: 10px;">Noise strength</td>
+						<td style="padding: 10px; text-align: center;">0.2 - 0.4</td>
+						<td style="padding: 10px; text-align: center;">0.4</td>
+					</tr>
+					<tr style="border-bottom: 1px solid #ddd;">
+						<td style="padding: 10px;">Guidance scale</td>
+						<td style="padding: 10px; text-align: center;">0 (null prompts) or 7.0 (task prompts)</td>
+						<td style="padding: 10px; text-align: center;">1.0</td>
+					</tr>
+					<tr style="border-bottom: 1px solid #ddd;">
+						<td style="padding: 10px;">Batch size</td>
+						<td style="padding: 10px; text-align: center;">~256 per gradient update</td>
+						<td style="padding: 10px; text-align: center;">Effective 16 (2 x 8 grad accumulation)</td>
+					</tr>
+					<tr style="border-bottom: 1px solid #ddd;">
+						<td style="padding: 10px;">Epochs / training length</td>
+						<td style="padding: 10px; text-align: center;">Up to 500 (reward continued climbing)</td>
+						<td style="padding: 10px; text-align: center;">30 epochs</td>
+					</tr>
+					<tr>
+						<td style="padding: 10px;">Train dataset size</td>
+						<td style="padding: 10px; text-align: center;">256 - 1028 (larger improves validation, slower reward
+							climb)</td>
+						<td style="padding: 10px; text-align: center;">Full train split used for reported runs</td>
+					</tr>
+				</tbody>
+			</table>
+	
+			<!-- ===================================================== -->
+			<!-- 5) Evaluation (Universal, COD10K-specific)              -->
+			<!-- ===================================================== -->
 			<h2 id="methods_benchmarking">Evaluation</h2>
+	
 			<p>
-				To evaluate the effectiveness of our diffusion-enhanced classification approach, we compare four
-				conditions on the COD10K test set.
-				We establish two baselines: direct zero-shot classification of original images using CLIP without
-				diffusion processing, and classification
-				of images processed through the base (untrained) Stable Diffusion model. We then evaluate our trained
-				models: RL-trained SD and SFT-trained SD,
-				both fine-tuned for the camouflage classification task.
+				We evaluate on a withheld COD10K test set of 4000 images. We report top-1, top-3, and top-5 accuracy under a
+				fixed
+				CLIP evaluation protocol and compare four conditions:
 			</p>
-
+	
+			<ol>
+				<li><strong>CLIP Baseline:</strong> CLIP zero-shot classification on the original images (no diffusion).
+				</li>
+				<li><strong>BASE SD + CLIP:</strong> images edited by an untuned Stable Diffusion pipeline, then classified
+					by CLIP.</li>
+				<li><strong>RL-Trained SD + CLIP:</strong> images edited by the RL-optimized diffusion pipeline, then
+					classified by CLIP.</li>
+				<li><strong>SFT-Trained SD + CLIP:</strong> images edited by the SFT-optimized diffusion pipeline, then
+					classified by CLIP.</li>
+			</ol>
+	
 			<p>
-				All evaluations use the same CLIP model (<code>openai/clip-vit-base-patch16</code>)
-				and preprocessing pipeline to ensure fair comparison. Images are resized to
-				224×224 using bicubic interpolation and normalized using CLIP's standard
+				All conditions use the same CLIP model (<code>openai/clip-vit-base-patch16</code>) and preprocessing
+				pipeline to ensure
+				fair comparison. Images are resized to 224×224 using bicubic interpolation and normalized using CLIP's
+				standard
 				statistics (mean: [0.4815, 0.4578, 0.4082], std: [0.2686, 0.2613, 0.2758]).
-				We pre-compute normalized text embeddings for all classes using prompts of the
-				form "An image of {class_name}" and compute classification logits using CLIP's
-				learned temperature-scaled cosine similarity.
+				We pre-compute normalized text embeddings for all classes using prompts of the form "An image of
+				{class_name}" and compute
+				classification logits using CLIP's learned temperature-scaled cosine similarity.
 			</p>
-
-			<p>
-				For each condition, we report top-1 through top-5 classification accuracy,
-				mean negative log-likelihood (NLL), and mean probability assigned to the
-				correct class. These metrics are computed across the entire test set and
-				optionally broken down by class for per-class analysis.
-			</p>
-
+	
 		</div>
 		<div class="margin-right-block"></div>
 	</div>
+
 
 	<div class="content-margin-container" id="results">
 		<div class="margin-left-block"></div>
@@ -1520,9 +1504,9 @@
 		<div class="main-content-block">
 
 			<p>
-				The first row shows results of "good" generations from diffusion model, while the second row shows poor
-				generations that lead to misclassifications.
-				The good generations show some promising behavior, such as a blurring of the background which enhances
+				The first row shows a series of "good" generations from diffusion model, while the second row shows "bad"
+				generations that lead to misclassifications from the same model.
+				The "good" generations show some promising behavior, such as a blurring of the background which enhances
 				the camouflaged object.
 				This is apparent in the frog and spider image pairs, where the background is noticeably blurred relative
 				to the camouflaged object.
@@ -1530,14 +1514,14 @@
 				and simplify the background colors.
 			</p>
 			<p>
-				In each image pair of the "poor" generations, the diffusion model seems to misidentify the
+				In each image pair of the "bad" generations, the diffusion model seems to misidentify the
 				camouflaged object as a different class and denoise towards that data distribution. This explains why
 				the SFT-trained model performs worse than the baseline
 				camouflage dataset images. This is very noticeable in the snake-frog image pair, where the snake
 				totally disappears and some resemblance of a frog appears. The spider-moth image pair shows another
 				interesting behavior, where a "moth" object is seemingly
 				generated independently. It is worth noting that even to the human eye, the camouflage images for the
-				"poor" generations are considerably harder, although
+				"bad" generations are considerably harder, although
 				they all belong to the same COD10K dataset without difficulty distinctions.
 			</p>
 
@@ -1956,6 +1940,11 @@
 						HuggingFace (n.d.).
 						<a href="https://huggingface.co/docs/trl/main/ddpo_trainer">Denoising Diffusion Policy Optimization</a>.
 						HuggingFace TRL Documentation.
+					</li>
+					<li id="ref_schulman_lora">
+						Schulman, J. (2025).
+						<a href="https://thinkingmachines.ai/blog/lora/#how-much-capacity-is-needed-by-supervised-and-reinforcement-learning">LoRA Without Regret</a>.
+						Thinking Machines Blog.
 					</li>
 				</ol>
 			</div>
