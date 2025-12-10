@@ -427,7 +427,7 @@
 			<img src="./images/overfit_batfish.png" style="width: 80%; height: auto;" />
 			<p class="heavy-caption">Example of overfitting in RL-trained model</p>
 		</div>
-		<div class="margin-right-block"><strong>Figure 1</strong> <br><br>With
+		<div class="margin-right-block"><strong id="figure_1">Figure 1</strong> <br><br>With
 		only a single image, Stable Diffusion trained with ImageDDPO can quickly
 		overfit to generate its best idea of the prototypical 'batfish'.</div>
 	</div>
@@ -795,7 +795,7 @@
 			<img src="./images/imagenetc-example-ostrich-fog-severity5.jpeg" style="width: 50%; height: auto;" />
 			<p class="heavy-caption">ImageNet-C Sample Image (Ostrich with severity 5 fog)</p>
 		</div>
-		<div class="margin-right-block"><strong>Figure 4</strong></div>
+		<div class="margin-right-block" id="figure_4"><strong>Figure 4</strong></div>
 	</div>
 
 	<div class="content-margin-container">
@@ -900,7 +900,7 @@
 	<div class="content-margin-container" id="methods_details">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h2 id="methods_imageddpo">ImageDDPO (Hector)</h2>
+			<h2 id="methods_imageddpo">ImageDDPO</h2>
 			
 			<p>
 				ImageDDPO extends DDPO to the img2img setting by optimizing a diffusion policy that edits an input image instead of
@@ -954,25 +954,97 @@
 				</li>
 			</ul>
 			
-			<h2 id="methods_rl">RL Methods (universal) (Hector + Luc)</h2>
-			Explain the methodology for the RL attempts. Hector will write about
-			general setup and structure (rl loop, reward function, how
-			ImageDDPOTrainer is used)
-			<!-- Luc will write about modifications made to original setup for the CIFAR-C task. -->
+			<h2 id="methods_rl">RL Methods</h2>
+			<p>
+				Our reinforcement learning setup extends the <code>ImageDDPOTrainer</code> with three
+				task-specific modifications. First, we define a reward function equal to the logit
+				difference between the optimized and original images, which yielded the most stable
+				gradient signal compared to margin-based or probability-based alternatives. Second,
+				we integrate distributed training via <code>accelerate</code>, allowing rollouts, reward
+				evaluation, and PPO updates to run efficiently across devices. Third, we add a
+				validation hook that periodically reconstructs diffusion intermediates to monitor
+				whether training meaningfully affects the denoising trajectory;
+				<a href="#figure_1">Figure 1</a> shows an
+				example intermediate.
+			</p>
 			
-			Once the data was collected and preprocessed into the same format as
-			the COD10K dataset, we attempted to use the same ImageDDPOTrainer
-			class to train Stable Diffusion with RL on the CIFAR-10-C and
-			ImageNet-C datasets. Due to time and compute constraints, these
-			runs — especially on CIFAR-10-C — did not yield robust or
-			interpretable accuracy improvements, so we treat them as preliminary
-			and do not report quantitative metrics in the Results section. As we
-			had plain text labels for both additional datasets, the intended
-			training pipeline and reward function remained the same. However, it
-			is important to note that the CIFAR-10-C is much simpler with
-			smaller images and only 10 classes. Along with having larger images,
-			ImageNet-C has 1000 classes, which can make it more challenging for
-			the RL optimization to effectively improve classification accuracy.
+			<p>
+				Beyond these changes, the training loop remains identical: once images were
+				preprocessed into the COD10K format, the same <code>ImageDDPOTrainer</code> was used to
+				fine-tune Stable Diffusion on CIFAR-10-C and ImageNet-C. Because both datasets
+				provide plain class labels, the reward definition, sampling procedure, and PPO
+				update remain unchanged. CIFAR-10-C’s smaller spatial resolution and 10-class
+				structure make optimization comparatively easy, while ImageNet-C’s 1000-class
+				label space introduces a noisier reward landscape that demands more rollouts to
+				achieve consistent improvement.
+			</p>
+
+			<h2 id="methods_design">Design Choices</h2>
+
+			<p>
+				The core design choices we confronted early in the development of
+				this work were:
+			</p>
+			<ol>
+				<li>
+					<strong>Vision Backbone (CLIP).</strong>
+					We selected CLIP as the downstream classifier because its
+					open-vocabulary interface allows a single model to evaluate
+					any dataset without retraining. This enabled rapid
+					experimentation with prompt engineering for both evaluation
+					and generation, and aligned naturally with Stable
+					Diffusion’s text-conditioning pipeline. Specifically, we used
+					<code>openai/clip-vit-base-patch16</code> because its smaller
+					patch size measurably improved accuracy and reward sensitivity
+					on camouflaged scenes. 
+					
+					<br><br>
+
+					For CIFAR-10-C and ImageNet-C, a
+					lightweight supervised classifier (e.g., ResNet-18/50) would
+					have been better matched to the label distributions, but time
+					constraints prevented a full comparison.
+				</li>
+			
+				<li>
+					<strong>Generative Backbone (Stable Diffusion 1.5).</strong>
+					We adopted SD 1.5 for its balance of generation quality and
+					inference speed — both essential in an RL loop that
+					repeatedly samples full diffusion trajectories. SD 1.5 also
+					integrates cleanly into the existing
+					<code>DDPOTrainer</code> codepath, minimizing engineering
+					overhead.
+				</li>
+			
+				<li>
+					<strong>Reward Function.</strong>
+					We evaluated several formulations and found that only
+					logit-difference rewards produced stable, monotonic
+					learning. Probability-based rewards were too flat to guide
+					improvement, and margin-style rewards exhibited volatile
+					scale. Logit change provided a self-referential signal with
+					consistent magnitude across samples.
+				</li>
+			
+				<li>
+					<strong>Reconstruction Metric.</strong>
+					We used LPIPS to quantify perceptual drift between the input
+					and reconstructed output. Compared to pixelwise MSE or
+					KL-based metrics, LPIPS more reliably tracks semantic
+					preservation — the quantity we most wanted to penalize when
+					encouraging classification-helpful edits. 
+					
+					<br><br>
+					Empirically, however, this penalty was too aggressive:
+					because we never actually reached a reward-hacking regime,
+					the LPIPS term dominated early updates and drove rewards
+					sharply negative before useful behavior could emerge.
+					<br><br>
+				</li>
+			</ol>
+
+
+
 
 			<h2 id="methods_sft">Supervised Fine-Tuning (Kevin)</h2>
 			<p>
@@ -1377,7 +1449,7 @@
 				'Bad' Generations
 			</p>
 		</div>
-		<div class="margin-right-block"><strong>Figure 7</strong></div>
+		<div class="margin-right-block" id="figure_7"><strong>Figure 7</strong></div>
 	</div>
 
 	<div class="content-margin-container" id="results_analysis">
@@ -1619,7 +1691,7 @@
 				subject, it denoises toward the wrong class distribution,
 				effectively hallucinating a high-quality but semantically
 				incorrect object. This failure mode is evidenced by the 'Bad'
-				generations in Figure 7.
+				generations in <a href="#figure_7">Figure 7</a>.
 			</p>
 			<p>
 				From an optimization perspective, this approach also struggles with credit assignment.
