@@ -88,7 +88,7 @@
 		}
 
 		.main-content-block {
-			width: 70%;
+			width: 60%;
 			/* Change this percentage as needed */
 			max-width: 1100px;
 			/* Optional: Maximum width */
@@ -101,15 +101,15 @@
 
 		.margin-left-block {
 			font-size: 14px;
-			width: 15%;
+			width: 25%;
 			/* Change this percentage as needed */
-			max-width: 130px;
+			max-width: 195px;
 			/* Optional: Maximum width */
 			position: relative;
 			margin-left: 10px;
 			text-align: left;
 			font-family: 'Iowan Old Style', serif;
-			padding: 5px;
+			padding: 5px 5px 5px 15px;
 		}
 
 		.margin-right-block {
@@ -414,13 +414,30 @@
 		<div class="margin-left-block">
 			<div id="outline-nav">
 				<b style="font-size: 16px">Outline</b><br /><br />
-				<a href="#intro">Introduction</a><br /><br />
-				<a href="#preliminaries">Preliminaries</a><br /><br />
-				<a href="#task_data">Task and Data Description</a><br /><br />
-				<a href="#methods">Methods</a><br /><br />
-				<a href="#results">Results</a><br /><br />
-				<a href="#discussion">Discussion</a><br /><br />
-				<a href="#conclusion">Conclusion</a><br /><br />
+				<a href="#intro" style="font-size: 16px">Introduction</a><br /><br />
+				<a href="#preliminaries" style="font-size: 16px">Preliminaries</a><br />
+				<a href="#preliminaries_diffusion" style="font-size: 14px; margin-left: 15px;">Diffusion</a><br />
+				<a href="#preliminaries_pg" style="font-size: 14px; margin-left:
+				15px;">RL and Policy Gradient Methods</a><br />
+				<a href="#preliminaries_ddpo" style="font-size: 14px; margin-left: 15px;">DDPOTrainer</a><br /><br />
+				<a href="#task_data" style="font-size: 16px">Task and Data Description</a><br />
+				<a href="#task_data_camouflage" style="font-size: 14px; margin-left: 15px;">COD10K</a><br />
+				<a href="#task_data_cifar" style="font-size: 14px; margin-left: 15px;">CIFAR-10-C</a><br />
+				<a href="#task_data_imagenet" style="font-size: 14px; margin-left: 15px;">ImageNet-C</a><br /><br />
+				<a href="#methods" style="font-size: 16px">Methods</a><br />
+				<a href="#methods_imageddpo" style="font-size: 14px; margin-left: 15px;">ImageDDPO</a><br />
+				<a href="#methods_rl" style="font-size: 14px; margin-left: 15px;">RL Methods</a><br />
+				<a href="#methods_design" style="font-size: 14px; margin-left: 15px;">Design Choices</a><br />
+				<a href="#methods_sft" style="font-size: 14px; margin-left: 15px;">Supervised Fine-Tuning (Kevin)</a><br />
+				<a href="#methods_benchmarking" style="font-size: 14px; margin-left: 15px;">Evaluation</a><br /><br />
+				<a href="#results" style="font-size: 16px">Results</a><br />
+				<a href="#results_camouflage" style="font-size: 14px; margin-left: 15px;">Camouflage Task</a><br />
+				<a href="#results_cifar" style="font-size: 14px; margin-left:
+				15px;">Corruption Task</a><br /><br />
+				<a href="#discussion" style="font-size: 16px">Discussion</a><br />
+				<a href="#discussion_failure_analysis" style="font-size: 14px; margin-left: 15px;">Failure Analysis</a><br />
+				<a href="#discussion_extensions" style="font-size: 14px; margin-left: 15px;">Extensions</a><br /><br />
+				<a href="#conclusion" style="font-size: 16px">Conclusion</a><br /><br />
 			</div>
 		</div>
 		<div class="main-content-block">
@@ -693,7 +710,7 @@
 	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<img src="./images/CIFAR-10c-example-truck-gaussian-noise.png" style="width: 50%; height: auto;" />
+			<img src="./images/cifar10c-example-truck-gaussian-noise.png" style="width: 50%; height: auto;" />
 			<p class="heavy-caption">CIFAR-10-C Sample Image (Truck corrupted with Gaussian noise)</p>
 		</div>
 		<div class="margin-right-block"><strong>Figure 3</strong></div>
@@ -897,7 +914,7 @@
 		confidence and perceptual drift. </div>
 	</div>
 
-	<div class="content-margin-container" id="methods_details">
+	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 			<h2 id="methods_imageddpo">ImageDDPO</h2>
@@ -1235,14 +1252,14 @@
 		<div class="main-content-block">
 			<h1>Results</h1>
 
-			<h2>Camouflage Task</h2>
+			<h2 id="results_camouflage">Camouflage Task</h2>
 			<p>
-				Table 1 shows classification accuracy results on the COD10K test set across
+				<a href="#table_1">Table 1</a> shows classification accuracy results on the COD10K test set across
 				four experimental conditions: CLIP baseline, BASE SD + CLIP, RL-trained SD + CLIP,
 				and SFT-trained SD + CLIP.
 			</p>
 
-			<table style="border-collapse: collapse; width: 100%; margin: 20px 0;">
+			<table id="table_1" style="border-collapse: collapse; width: 100%; margin: 20px 0;">
 				<thead>
 					<tr style="border-bottom: 2px solid #333;">
 						<th style="padding: 10px; text-align: left;">Method</th>
@@ -1280,11 +1297,9 @@
 			</table>
 
 			<p>
-				[Add brief analysis here: e.g., "Both RL and SFT training improve classification
-				accuracy over the CLIP baseline, with SFT achieving XX.X% top-1 accuracy compared
-				to XX.X% for CLIP alone. The BASE SD baseline shows that even untrained diffusion
-				processing provides some benefit, suggesting the denoising process has an inherent
-				regularizing effect."]
+				RL and SFT improve classification accuracy over an untuned SD +
+				CLIP pipeline. However, a zero-shot clip baseline still
+				significantly exceeds the performance of all the trained pairs. 
 			</p>
 
 
@@ -1452,7 +1467,7 @@
 		<div class="margin-right-block" id="figure_7"><strong>Figure 7</strong></div>
 	</div>
 
-	<div class="content-margin-container" id="results_analysis">
+	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
 
@@ -1618,7 +1633,44 @@
 	<div class="content-margin-container" id="results_rl">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h4>Results: RL-Trained Model</h4>
+			<h4 id="results_rl">Results: RL-Trained Model</h4>
+			<p>
+				The results reported in <a href="#table_1">Table 1</a> were evaluated using the LoRA
+				checkpoint from the green run in <a href="#figure_10">Figure
+				10</a>. While this run ostensibly exhibited positive reward, the
+				overall test performance is poor because reward is based on
+				relative increase in logits for the desired class, rather than
+				comparison to base CLIP accuracy.  
+			</p>
+
+			<p>
+				We performed extensive hyperparameter tuning and extended
+				training runs (over 100 runs total). However, for the camouflage
+				task (where most of our effort was focused), we were not able to
+				exceed the results presented in <a href="#table_1">Table 1</a>. 
+
+			</p>
+
+			<!-- TODO: I want to put these hyperparameters into a neater table,
+			for RL and for SFT best runs. Would this go in the results section? -->
+			<p>
+				Most successful hyperparameter ranges tended to be:
+				<ul>
+					<li>Learning rate about 1e-4</li>
+					<li>Noise strength around 0.2-0.4</li>
+					<li>Guidance scale at 0 for null prompts, or 7.0
+					otherwise</li>
+					<li>Batch size per gradient update around 256</li>
+					<li>Epochs up to 500, but reward continued climbing the
+					entire time</li>
+					<li>Train dataset size: validation performance improves with
+					size, but reward climb is slower as the model has to learn
+					more about the dataset. In most of our testing for RL we
+					kept dataset size between 256 and 1028.</li>
+				</ul>
+
+			</p>
+
 		</div>
 		<div class="margin-right-block"></div>
 	</div>
@@ -1641,8 +1693,8 @@
 	<div class="content-margin-container" id="results_cifar">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h2>CIFAR-10-C Task (Preliminary)</h2>
-			We began extending our pipeline to the CIFAR-10-C task but were not able
+			<h2>Corruption Task (Preliminary)</h2>
+			We began extending our pipeline to the corruption task (CIFAR-10-C and ImageNet-C) but were not able
 			to obtain stable or interpretable generations within the project
 			timeline. Across the two hyperparameter configurations we tested, the
 			diffusion model quickly collapsed to heavily corrupted outputs and did
@@ -1654,6 +1706,8 @@
 			structure better matches the denoising bias of diffusion models and
 			enables stronger reward signals via CIFAR- or ImageNet-adapted vision
 			classifiers, rather than relying on an open-vocabulary CLIP model.
+			In our limited testing, reward was consistently climbing at a slow
+			rate of \(\sim 4e-4\) per image sampled. 
 		</div>
 		<div class="margin-right-block">
 		</div>
@@ -1715,7 +1769,7 @@
 						satellite imagery) would likely require separate fine-tuning on task-specific data.
 					</p> -->
 					
-					<h3>Extensions</h3>
+					<h3 id="discussion_extensions">Extensions</h3>
 					<p>
 						We propose several extensions to address these limitations and improve performance:
 					<ul>
@@ -1755,13 +1809,13 @@
 				While Stable Diffusion adapted with both supervised fine-tuning
 				and ImageDDPO exhibited improvements over a base, unadapted
 				generator, the inherent stochasticity of the diffusion process
-				makes this an overconstrained problem. This results in the
-				hallucination of new features rather than the pronounciation of
-				existing ones. When weighed against the substantial computational
-				overhead of iterative denoising, this accuracy-corruption tradeoff
-				renders the approach ineffective compared to standard
-				discriminative baselines (or more direct methods like SFT or
-				linear probing on the classifier).
+				distracts from the final goal of improving classification. This
+				results in the hallucination of new features rather than the
+				pronounciation of existing ones. When weighed against the
+				substantial computational overhead of iterative denoising, this
+				accuracy-corruption tradeoff renders the approach ineffective
+				compared to standard discriminative baselines (or more direct
+				methods like SFT or linear probing on the classifier).
 			</p>
 			<p>
 				We present these findings to discourage similar architectural
