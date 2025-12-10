@@ -462,27 +462,34 @@
 			degradation:
 			<ul>
 				<li>
-					<b>Natural Ambiguity:</b> The COD10K (Camouflaged Object Detection) dataset <a href="#ref_fan" class="cite"></a>,
+					<strong>Natural Ambiguity:</strong> The COD10K (Camouflaged Object
+					Detection) dataset <a href="#ref_fan" class="cite"></a>,
 					where the signal (animal) is hidden or camouflaged.
 				</li>
 				<li>
-					<b>Algorithmic Corruption:</b> The CIFAR-10-C dataset <a href="#ref_hendrycks" class="cite"></a>, representing
-					algorithmic noise and blur degradations to CIFAR-10 images.
+					<strong>Algorithmic Corruption:</strong> The CIFAR-10-C and ImageNet-C datasets <a href="#ref_hendrycks" class="cite"></a>, representing
+					algorithmic noise and blur degradations to CIFAR and ImageNet images, which we only explore in preliminary experiments
+					that did not reach stable performance within our compute budget.
 				</li>
 			</ul>
 			
-			We report a negative result. Our attempts find that neither SFT nor
-			RL-based optimization yield a statistically significant improvement
-			over the base CLIP accuracy. 
+			We report a negative result on COD10K: our SFT- and RL-based attempts do not yield a statistically significant
+			improvement over the base CLIP accuracy. For CIFAR-10-C, our experiments remained preliminary — the model did not
+			produce stable or interpretable generations within the project timeline — so we do not draw quantitative conclusions
+			for that setting.
+			
+			To read more about our hypotheses for the failure modes, refer to
+			the <a href="#discussion_failure_analysis">discussion.</a>
 
-			To read more about our hypotheses for the failure modes, refer to the <a href="#discussion_failure_analysis">discussion.</a>
 			
 			<br><br>
+
 			Given the substantial computational complexity and latency
-			introduced by the diffusion loop, we conclude that generative
-			semantic completion -- at least for these tasks -- is
-			an ineffective approach for improving robustness to visually
-			degraded inputs compared to standard classifier baselines.
+			introduced by the diffusion loop, we conclude that, for our
+			completed COD10K experiments — and for preliminary CIFAR-10-C runs
+			that failed to yield stable improvements — generative semantic
+			completion is an ineffective approach for improving robustness to
+			visually degraded inputs compared to standard classifier baselines.
 
 			<br><br>
 			All code for this experiement is available <a
@@ -686,7 +693,7 @@
 	<div class="content-margin-container">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<img src="./images/cifar10c-example-truck-gaussian-noise.png" style="width: 50%; height: auto;" />
+			<img src="./images/CIFAR-10c-example-truck-gaussian-noise.png" style="width: 50%; height: auto;" />
 			<p class="heavy-caption">CIFAR-10-C Sample Image (Truck corrupted with Gaussian noise)</p>
 		</div>
 		<div class="margin-right-block"><strong>Figure 3</strong></div>
@@ -953,16 +960,19 @@
 			ImageDDPOTrainer is used)
 			<!-- Luc will write about modifications made to original setup for the CIFAR-C task. -->
 			
-			Once the data was collected and preprocessed into the same format
-			as the COD10K dataset, we used the same ImageDDPOTrainer class
-			to train Stable Diffusion with RL on the CIFAR-10-C and ImageNet-C datasets.
-			As we had plain text labels for both additional datasets,
-			the training pipeline and reward function remained the same.
-			However, it is important to note that the CIFAR-10-C is much simpler
-			with smaller images and only 10 classes.
-			Along with having larger images, ImageNet-C has 1000 classes,
-			which can make it more challenging for the RL optimization to
-			effectively improve classification accuracy.
+			Once the data was collected and preprocessed into the same format as
+			the COD10K dataset, we attempted to use the same ImageDDPOTrainer
+			class to train Stable Diffusion with RL on the CIFAR-10-C and
+			ImageNet-C datasets. Due to time and compute constraints, these
+			runs — especially on CIFAR-10-C — did not yield robust or
+			interpretable accuracy improvements, so we treat them as preliminary
+			and do not report quantitative metrics in the Results section. As we
+			had plain text labels for both additional datasets, the intended
+			training pipeline and reward function remained the same. However, it
+			is important to note that the CIFAR-10-C is much simpler with
+			smaller images and only 10 classes. Along with having larger images,
+			ImageNet-C has 1000 classes, which can make it more challenging for
+			the RL optimization to effectively improve classification accuracy.
 
 			<h2 id="methods_sft">Supervised Fine-Tuning (Kevin)</h2>
 			<p>
@@ -1559,8 +1569,19 @@
 	<div class="content-margin-container" id="results_cifar">
 		<div class="margin-left-block"></div>
 		<div class="main-content-block">
-			<h2>CIFAR-C Task (Luc or Hector - whoever trains)</h2>
-			Comparing clip vs. clip+diffusion RL for CIFAR-C
+			<h2>CIFAR-10-C Task (Preliminary)</h2>
+			We began extending our pipeline to the CIFAR-10-C task but were not able
+			to obtain stable or interpretable generations within the project
+			timeline. Across the two hyperparameter configurations we tested, the
+			diffusion model quickly collapsed to heavily corrupted outputs and did
+			not improve CLIP accuracy, so we do not report quantitative results for
+			this setting.
+			<br /><br />
+			Nevertheless, we view CIFAR-10-C (and ImageNet-C at higher resolution)
+			as more promising testbeds than COD10K for future work. Their corruption
+			structure better matches the denoising bias of diffusion models and
+			enables stronger reward signals via CIFAR- or ImageNet-adapted vision
+			classifiers, rather than relying on an open-vocabulary CLIP model.
 		</div>
 		<div class="margin-right-block">
 		</div>
